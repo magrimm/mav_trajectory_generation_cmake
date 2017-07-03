@@ -46,12 +46,17 @@ template <int _N>
 PolynomialOptimizationNonLinear<_N>::PolynomialOptimizationNonLinear(
     size_t dimension, const NonlinearOptimizationParameters& parameters)
     : poly_opt_(dimension),
-      optimization_parameters_(parameters),
+      dimension_(dimension),
+      derivative_to_optimize_(derivative_order::INVALID),
+      optimization_parameters_(parameters) {}
 
 template <int _N>
 bool PolynomialOptimizationNonLinear<_N>::setupFromVertices(
     const Vertex::Vector& vertices, const std::vector<double>& segment_times,
     int derivative_to_optimize) {
+  derivative_to_optimize_ = derivative_to_optimize;
+  vertices_ = vertices;
+
   bool ret = poly_opt_.setupFromVertices(vertices, segment_times,
                                          derivative_to_optimize);
 

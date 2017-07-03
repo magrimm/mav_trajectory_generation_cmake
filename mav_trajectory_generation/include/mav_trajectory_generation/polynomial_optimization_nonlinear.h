@@ -286,6 +286,13 @@ class PolynomialOptimizationNonLinear {
   std::vector<std::shared_ptr<ConstraintData> > inequality_constraints_;
 
   OptimizationInfo optimization_info_;
+
+  // Number of polynomials, e.g 3 for a 3D path.
+  size_t dimension_;
+
+  Vertex::Vector vertices_;
+
+  int derivative_to_optimize_;
 };
 
 }  // namespace mav_trajectory_generation
