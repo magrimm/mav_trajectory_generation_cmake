@@ -44,11 +44,9 @@ inline void OptimizationInfo::print(std::ostream& stream) const {
 
 template <int _N>
 PolynomialOptimizationNonLinear<_N>::PolynomialOptimizationNonLinear(
-    size_t dimension, const NonlinearOptimizationParameters& parameters,
-    bool optimize_time_only)
+    size_t dimension, const NonlinearOptimizationParameters& parameters)
     : poly_opt_(dimension),
       optimization_parameters_(parameters),
-      optimize_time_only_(optimize_time_only) {}
 
 template <int _N>
 bool PolynomialOptimizationNonLinear<_N>::setupFromVertices(
@@ -58,12 +56,18 @@ bool PolynomialOptimizationNonLinear<_N>::setupFromVertices(
                                          derivative_to_optimize);
 
   size_t n_optimization_parameters;
-  if (optimize_time_only_) {
-    n_optimization_parameters = segment_times.size();
-  } else {
-    n_optimization_parameters =
-        segment_times.size() +
-        poly_opt_.getNumberFreeConstraints() * poly_opt_.getDimension();
+  switch (optimization_parameters_.objective) {
+    case NonlinearOptimizationParameters::OptimizationObjective::kOptimizeFreeConstraintsAndTime:
+      n_optimization_parameters =
+              segment_times.size() +
+              poly_opt_.getNumberFreeConstraints() * poly_opt_.getDimension();
+      break;
+    case NonlinearOptimizationParameters::OptimizationObjective::kOptimizeTime:
+      n_optimization_parameters = segment_times.size();
+      break;
+    default:
+      LOG(ERROR) << "Unkown Optimization Objective. Abort.";
+      break;
   }
 
   nlopt_.reset(new nlopt::opt(optimization_parameters_.algorithm,
@@ -95,10 +99,16 @@ int PolynomialOptimizationNonLinear<_N>::optimize() {
   const std::chrono::high_resolution_clock::time_point t_start =
       std::chrono::high_resolution_clock::now();
 
-  if (optimize_time_only_) {
-    result = optimizeTime();
-  } else {
-    result = optimizeTimeAndFreeConstraints();
+  switch (optimization_parameters_.objective) {
+    case NonlinearOptimizationParameters::OptimizationObjective::kOptimizeFreeConstraintsAndTime:
+      result = optimizeTimeAndFreeConstraints();
+      break;
+    case NonlinearOptimizationParameters::OptimizationObjective::kOptimizeTime:
+      result = optimizeTime();
+      break;
+    default:
+      LOG(ERROR) << "Unkown Optimization Objective. Abort.";
+      break;
   }
 
   const std::chrono::high_resolution_clock::time_point t_stop =

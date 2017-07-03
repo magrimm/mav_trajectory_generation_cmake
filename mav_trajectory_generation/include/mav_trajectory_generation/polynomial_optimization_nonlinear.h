@@ -46,7 +46,8 @@ struct NonlinearOptimizationParameters {
         random_seed(0),
         use_soft_constraints(true),
         soft_constraint_weight(100.0),
-        print_debug_info(false) {}
+        print_debug_info(false),
+        objective(kOptimizeFreeConstraintsAndTime) {}
 
   // Stopping criteria, if objective function changes less than absolute value.
   // Disabled if negative.
@@ -97,6 +98,20 @@ struct NonlinearOptimizationParameters {
   double soft_constraint_weight;
 
   bool print_debug_info;
+
+  // Specifies which optimization should be run.
+  // kOptimizeTime: Run optimization over segment times only. Only the segment
+  // times are optimization parameters, and the remaining free parameters are
+  // found by solving the linear optimization problem with the given segment
+  // times in every iteration.
+  // kOptimizeFreeConstraintsAndTime: Both segment times and free
+  // derivatives become optimization variables. This case is
+  // theoretically correct, but may result in more iterations.
+  enum OptimizationObjective {
+    kOptimizeFreeConstraintsAndTime,
+    kOptimizeTime,
+    kUnknown
+  } objective;
 };
 
 class OptimizationInfo {
@@ -143,8 +158,7 @@ class PolynomialOptimizationNonLinear {
   // variables. The latter case is theoretically correct, but may result in
   // more iterations.
   PolynomialOptimizationNonLinear(
-      size_t dimension, const NonlinearOptimizationParameters& parameters,
-      bool optimize_time_only);
+      size_t dimension, const NonlinearOptimizationParameters& parameters);
 
   // Sets up the optimization problem from a vector of Vertex objects and
   // a vector of times between the vertices.
@@ -279,8 +293,6 @@ class PolynomialOptimizationNonLinear {
   // Holds the data for evaluating inequality constraints.
   std::vector<std::shared_ptr<ConstraintData> > inequality_constraints_;
 
-  // Specifies whether to run the time only, or the full optimization.
-  bool optimize_time_only_;
 
   OptimizationInfo optimization_info_;
 };
