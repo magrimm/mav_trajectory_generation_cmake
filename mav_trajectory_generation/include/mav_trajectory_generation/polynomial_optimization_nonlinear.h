@@ -149,14 +149,6 @@ class PolynomialOptimizationNonLinear {
   // Sets up the nonlinear optimization problem.
   // Input: dimension = Spatial dimension of the problem. Usually 1 or 3.
   // Input: parameters = Parameters for the optimization problem.
-  // Input: optimize_time_only = Specifies whether the optimization is run
-  // over the segment times only.
-  // If true, only the segment times are optimization parameters, and the
-  // remaining free parameters are found by solving the linear optimization
-  // problem with the given segment times in every iteration.
-  // If false, both segment times and free derivatives become optimization
-  // variables. The latter case is theoretically correct, but may result in
-  // more iterations.
   PolynomialOptimizationNonLinear(
       size_t dimension, const NonlinearOptimizationParameters& parameters);
 
@@ -292,7 +284,6 @@ class PolynomialOptimizationNonLinear {
 
   // Holds the data for evaluating inequality constraints.
   std::vector<std::shared_ptr<ConstraintData> > inequality_constraints_;
-
 
   OptimizationInfo optimization_info_;
 };
