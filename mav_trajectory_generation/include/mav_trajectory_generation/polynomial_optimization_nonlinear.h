@@ -108,6 +108,7 @@ struct NonlinearOptimizationParameters {
   // derivatives become optimization variables. This case is
   // theoretically correct, but may result in more iterations.
   enum OptimizationObjective {
+    kOptimizeFreeConstraints,
     kOptimizeFreeConstraintsAndTime,
     kOptimizeTime,
     kUnknown
@@ -241,6 +242,13 @@ class PolynomialOptimizationNonLinear {
       const std::vector<double>& optimization_variables,
       std::vector<double>& gradient, void* data);
 
+  static double objectiveFunctionFreeConstraints(
+          const std::vector<double>& x, std::vector<double>& gradient,
+          void* data);
+
+  static double computeDerivativeCostAndGradient(
+          std::vector<Eigen::VectorXd>* gradients, void* data);
+
   // Evaluates the maximum magnitude constraint at the current value of
   // the optimization variables.
   // All input parameters are ignored, all information is contained in data.
@@ -253,6 +261,9 @@ class PolynomialOptimizationNonLinear {
 
   // Does the actual optimization work for the full optimization version.
   int optimizeTimeAndFreeConstraints();
+
+  // Does the actual optimization work for optimizing only the Free Constraints.
+  int optimizeFreeConstraints();
 
   // Evaluates the maximum magnitude constraints as soft constraints and
   // returns a cost, depending on the violation of the constraints.
