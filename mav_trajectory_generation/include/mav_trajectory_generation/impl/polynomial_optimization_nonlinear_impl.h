@@ -180,7 +180,8 @@ int PolynomialOptimizationNonLinear<_N>::optimizeTime() {
 
 template <int _N>
 int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraints() {
-  std::vector<double> initial_solution, lower_bounds, upper_bounds;
+  std::vector<double> initial_step, initial_solution, lower_bounds,
+          upper_bounds;
 
   // compute initial solution
   poly_opt_.solveLinear();
@@ -193,6 +194,7 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraints() {
           free_constraints.size() * free_constraints.front().size();
 
   initial_solution.reserve(n_optmization_variables);
+  initial_step.reserve(n_optmization_variables);
   lower_bounds.reserve(n_optmization_variables);
   upper_bounds.reserve(n_optmization_variables);
 
@@ -202,13 +204,17 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraints() {
     }
   }
 
+  initial_step.reserve(n_optmization_variables);
   for (double x : initial_solution) {
     const double abs_x = std::abs(x);
+    initial_step.push_back(optimization_parameters_.initial_stepsize_rel *
+                           abs_x);
     lower_bounds.push_back(-abs_x * 2);
     upper_bounds.push_back(abs_x * 2);
   }
 
   try {
+    nlopt_->set_initial_step(initial_step);
     nlopt_->set_lower_bounds(lower_bounds);
     nlopt_->set_upper_bounds(upper_bounds);
     nlopt_->set_min_objective(&PolynomialOptimizationNonLinear<
