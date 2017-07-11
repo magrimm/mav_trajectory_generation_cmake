@@ -394,8 +394,8 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionTime(
 template <int _N>
 double PolynomialOptimizationNonLinear<_N>::objectiveFunctionTimeAndConstraints(
     const std::vector<double>& x, std::vector<double>& gradient, void* data) {
-//  CHECK(gradient.empty())
-//      << "computing gradient not possible, choose a gradient free method";
+  CHECK(gradient.empty())
+      << "computing gradient not possible, choose a gradient free method";
   CHECK_NOTNULL(data);
 
   PolynomialOptimizationNonLinear<N>* optimization_data =
