@@ -62,6 +62,10 @@ bool PolynomialOptimizationNonLinear<_N>::setupFromVertices(
 
   size_t n_optimization_parameters;
   switch (optimization_parameters_.objective) {
+    case NonlinearOptimizationParameters::OptimizationObjective::kOptimizeFreeConstraints:
+      n_optimization_parameters =
+              poly_opt_.getNumberFreeConstraints() * poly_opt_.getDimension();
+      break;
     case NonlinearOptimizationParameters::OptimizationObjective::kOptimizeFreeConstraintsAndTime:
       n_optimization_parameters =
               segment_times.size() +
@@ -105,6 +109,9 @@ int PolynomialOptimizationNonLinear<_N>::optimize() {
       std::chrono::high_resolution_clock::now();
 
   switch (optimization_parameters_.objective) {
+    case NonlinearOptimizationParameters::OptimizationObjective::kOptimizeFreeConstraints:
+      result = optimizeFreeConstraints();
+      break;
     case NonlinearOptimizationParameters::OptimizationObjective::kOptimizeFreeConstraintsAndTime:
       result = optimizeTimeAndFreeConstraints();
       break;
@@ -163,6 +170,62 @@ int PolynomialOptimizationNonLinear<_N>::optimizeTime() {
 
   try {
     result = nlopt_->optimize(segment_times, final_cost);
+  } catch (std::exception& e) {
+    LOG(ERROR) << "error while running nlopt: " << e.what() << std::endl;
+    return nlopt::FAILURE;
+  }
+
+  return result;
+}
+
+template <int _N>
+int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraints() {
+  std::vector<double> initial_solution, lower_bounds, upper_bounds;
+
+  // compute initial solution
+  poly_opt_.solveLinear();
+  std::vector<Eigen::VectorXd> free_constraints;
+  poly_opt_.getFreeConstraints(&free_constraints);
+  CHECK(free_constraints.size() > 0);
+  CHECK(free_constraints.front().size() > 0);
+
+  const size_t n_optmization_variables =
+          free_constraints.size() * free_constraints.front().size();
+
+  initial_solution.reserve(n_optmization_variables);
+  lower_bounds.reserve(n_optmization_variables);
+  upper_bounds.reserve(n_optmization_variables);
+
+  for (const Eigen::VectorXd& c : free_constraints) {
+    for (int i = 0; i < c.size(); ++i) {
+      initial_solution.push_back(c[i]);
+    }
+  }
+
+  for (double x : initial_solution) {
+    const double abs_x = std::abs(x);
+    lower_bounds.push_back(-abs_x * 2);
+    upper_bounds.push_back(abs_x * 2);
+  }
+
+  try {
+    nlopt_->set_lower_bounds(lower_bounds);
+    nlopt_->set_upper_bounds(upper_bounds);
+    nlopt_->set_min_objective(&PolynomialOptimizationNonLinear<
+                                      N>::objectiveFunctionFreeConstraints,
+                              this);
+  } catch (std::exception& e) {
+    LOG(ERROR) << "error while setting up nlopt: " << e.what() << std::endl;
+    return nlopt::FAILURE;
+  }
+
+  double final_cost = std::numeric_limits<double>::max();
+  int result;
+
+  try {
+    timing::Timer timer_solve("optimize_nonlinear_full_total_time");
+    result = nlopt_->optimize(initial_solution, final_cost);
+    timer_solve.Stop();
   } catch (std::exception& e) {
     LOG(ERROR) << "error while running nlopt: " << e.what() << std::endl;
     return nlopt::FAILURE;
@@ -591,8 +654,8 @@ template <int _N>
 double PolynomialOptimizationNonLinear<_N>::evaluateMaximumMagnitudeConstraint(
     const std::vector<double>& segment_times, std::vector<double>& gradient,
     void* data) {
-  CHECK(gradient.empty())
-      << "computing gradient not possible, choose a gradient free method";
+//  CHECK(gradient.empty())
+//      << "computing gradient not possible, choose a gradient free method";
   ConstraintData* constraint_data =
       static_cast<ConstraintData*>(data);  // wheee ...
   PolynomialOptimizationNonLinear<N>* optimization_data =
