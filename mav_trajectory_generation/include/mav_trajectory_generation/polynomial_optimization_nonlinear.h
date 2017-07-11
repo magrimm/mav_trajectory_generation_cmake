@@ -241,6 +241,10 @@ class PolynomialOptimizationNonLinear {
       const std::vector<double>& optimization_variables,
       std::vector<double>& gradient, void* data);
 
+  static double objectiveFunctionFreeConstraints(
+          const std::vector<double>& x, std::vector<double>& gradient,
+          void* data);
+
   static double computeDerivativeCostAndGradient(
           std::vector<Eigen::VectorXd>* gradients, void* data);
 
