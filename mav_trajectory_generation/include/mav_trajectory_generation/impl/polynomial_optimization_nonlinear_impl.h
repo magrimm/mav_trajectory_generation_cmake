@@ -428,16 +428,6 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionTimeAndConstraints(
   optimization_data->poly_opt_.updateSegmentTimes(segment_times);
   optimization_data->poly_opt_.setFreeConstraints(free_constraints);
 
-  if (optimization_data->optimization_parameters_.print_debug_info) {
-    for (int d = 0; d < dim; ++d) {
-      std::cout << "free_constraints -- dim " << d << std::endl;
-      for (int i = 0; i < free_constraints[d].rows(); ++i) {
-        std::cout << free_constraints[d][i] << " | ";
-      }
-      std::cout << std::endl;
-    }
-  }
-
   std::vector<Eigen::VectorXd> grad_d;
   double J_d = 0.0;
   if (!gradient.empty()) {
@@ -526,16 +516,6 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraints(
   }
 
   optimization_data->poly_opt_.setFreeConstraints(free_constraints);
-
-  if (optimization_data->optimization_parameters_.print_debug_info) {
-    for (int d = 0; d < dim; ++d) {
-      std::cout << "free_constraints -- dim " << d << std::endl;
-      for (int i = 0; i < free_constraints[d].rows(); ++i) {
-        std::cout << free_constraints[d][i] << " | ";
-      }
-      std::cout << std::endl;
-    }
-  }
 
   std::vector<Eigen::VectorXd> grad_d;
   double J_d = 0.0;
@@ -645,18 +625,6 @@ double PolynomialOptimizationNonLinear<_N>::computeDerivativeCostAndGradient(
     // Get a copy of d_p and d_f for this axis.
     const Eigen::VectorXd& d_p = d_p_vec[k];
     const Eigen::VectorXd& d_f = d_f_vec[k];
-
-    if (data->optimization_parameters_.print_debug_info) {
-//      std::cout << "d_p:\n" << d_p << "\n\nd_f:\n" << d_f << std::endl;
-//      std::cout << "d_p:\n" << d_p << std::endl;
-
-      std::cout << "dim " << k << " d_p:" << std::endl;
-
-      for (int i = 0; i < d_p.rows(); ++i) {
-        std::cout << d_p[i] << " | ";
-      }
-      std::cout << std::endl;
-    }
 
     // Now do the other thing.
     J_d_temp = d_f.transpose() * R_ff * d_f +
