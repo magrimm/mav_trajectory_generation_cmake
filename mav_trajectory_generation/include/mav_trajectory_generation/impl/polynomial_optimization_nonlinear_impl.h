@@ -453,8 +453,6 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionTimeAndConstraints(
   double cost_trajectory = J_d;
   double cost_time = 0.0;
   double cost_constraints = 0.0;
-  LOG(INFO) << "computeCost(): " << cost_trajectory_linopt;
-  LOG(INFO) << "J_d: " << cost_trajectory;
 
   const double total_time = computeTotalTrajectoryTime(segment_times);
   cost_time = total_time * total_time *
@@ -472,6 +470,7 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionTimeAndConstraints(
               << optimization_data->optimization_info_.n_iterations << "---- "
               << std::endl;
     std::cout << "  trajectory: " << cost_trajectory << std::endl;
+    std::cout << "  computeCost(): " << cost_trajectory_linopt << std::endl;
     std::cout << "  time: " << cost_time << std::endl;
     std::cout << "  constraints: " << cost_constraints << std::endl;
     std::cout << "  sum: " << cost_trajectory + cost_time + cost_constraints
@@ -483,7 +482,7 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionTimeAndConstraints(
   optimization_data->optimization_info_.cost_trajectory = cost_trajectory;
   optimization_data->optimization_info_.cost_time = cost_time;
   optimization_data->optimization_info_.cost_soft_constraints =
-      cost_constraints;
+          cost_constraints;
 
   if (!gradient.empty()) {
     gradient.clear();
@@ -548,12 +547,11 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraints(
             NULL, optimization_data);
   }
 
+  // TODO: get rid after testing
   double cost_trajectory2 = optimization_data->poly_opt_.computeCost();
   double cost_trajectory = J_d;
   double cost_time = 0.0;
   double cost_constraints = 0.0;
-  LOG(INFO) << "computeCost(): " << cost_trajectory2;
-  LOG(INFO) << "J_d: " << cost_trajectory;
 
   if (optimization_data->optimization_parameters_.use_soft_constraints) {
     cost_constraints =
@@ -567,6 +565,7 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraints(
               << optimization_data->optimization_info_.n_iterations << "---- "
               << std::endl;
     std::cout << "  trajectory: " << cost_trajectory << std::endl;
+    std::cout << "  computeCost(): " << cost_trajectory2 << std::endl;
     std::cout << "  time: " << cost_time << std::endl;
     std::cout << "  constraints: " << cost_constraints << std::endl;
     std::cout << "  sum: " << cost_trajectory + cost_time + cost_constraints
