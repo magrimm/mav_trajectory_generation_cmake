@@ -636,6 +636,7 @@ template <int _N>
 double PolynomialOptimizationNonLinear<_N>::evaluateMaximumMagnitudeConstraint(
     const std::vector<double>& segment_times, std::vector<double>& gradient,
     void* data) {
+  // TODO: How to handle soft-constraints in gradient-based case?
 //  CHECK(gradient.empty())
 //      << "computing gradient not possible, choose a gradient free method";
   ConstraintData* constraint_data =
