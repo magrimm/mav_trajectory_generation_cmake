@@ -241,6 +241,9 @@ class PolynomialOptimizationNonLinear {
       const std::vector<double>& optimization_variables,
       std::vector<double>& gradient, void* data);
 
+  static double computeDerivativeCostAndGradient(
+          std::vector<Eigen::VectorXd>* gradients, void* data);
+
   // Evaluates the maximum magnitude constraint at the current value of
   // the optimization variables.
   // All input parameters are ignored, all information is contained in data.
