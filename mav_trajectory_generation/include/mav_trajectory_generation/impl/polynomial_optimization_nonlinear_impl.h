@@ -877,6 +877,18 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
         T[n] = pow(t, n);
       }
 
+      // 3) Calculate position and velocity (see paper equation (9) and (11))
+      Eigen::VectorXd pos(dim), vel(dim);
+      pos.setZero();
+      vel.setZero();
+      for (int k = 0; k < dim; ++k) {
+        // Coeff for this segment
+        Eigen::Block<Eigen::VectorXd> p_k =
+                p_all_segments[k].block(i * N, 0, N, 1);
+
+        pos(k) = (T.transpose() * p_k)(0);
+        vel(k) = (T.transpose() * data->V_ * p_k)(0);
+      }
     }
   }
   
