@@ -918,6 +918,17 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
       if (dist_sum < dist_sum_limit) {
         continue;
       }
+
+      // Cost and gradient of potential map from esdf
+      Eigen::VectorXd grad_c_d_f(dim); // dc/dd_f
+
+      double c = 0.0;
+      if (gradients != NULL) {
+        c = getCostAndGradientPotentialESDF(pos, &grad_c_d_f, data);
+      } else {
+        c = getCostAndGradientPotentialESDF(pos, NULL, data);
+      }
+
     }
   }
   
