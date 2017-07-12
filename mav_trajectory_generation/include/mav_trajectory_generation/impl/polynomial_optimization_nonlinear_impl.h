@@ -281,11 +281,17 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
   // [0 0 0 3 0 ...]
   // [0 0 0 0 4 ...]
   // [  ...   ...  ]
+  size_t n_segments = poly_opt_.getNumberSegments();
+
+  V_all_segments_.resize(n_segments * N, n_segments * N);
   V_.resize(N, N);
+
+  V_all_segments_.setZero();
   V_.setZero();
-  for (int i = 0; i < V_.diagonal(1).size(); ++i) {
-    V_.diagonal(1)(i) = (i + 1) % N;
+  for (int i = 0; i < V_all_segments_.diagonal(1).size(); ++i) {
+    V_all_segments_.diagonal(1)(i) = (i + 1) % N;
   }
+  V_ = V_all_segments_.block(0, 0, N, N);
 
   for (const Eigen::VectorXd& c : free_constraints) {
     for (int i = 0; i < c.size(); ++i) {

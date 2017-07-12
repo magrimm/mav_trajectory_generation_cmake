@@ -321,7 +321,11 @@ class PolynomialOptimizationNonLinear {
 
   // L = A_inv * M
   Eigen::MatrixXd L_;
+
+  // Matrix for mapping a vector of polynomial coefficients of a function to
+  // the polynomail coefficients of its derivative
   Eigen::MatrixXd V_;
+  Eigen::MatrixXd V_all_segments_;
 };
 
 }  // namespace mav_trajectory_generation
