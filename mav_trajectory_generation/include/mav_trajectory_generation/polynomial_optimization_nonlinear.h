@@ -111,6 +111,7 @@ struct NonlinearOptimizationParameters {
     kOptimizeFreeConstraints,
     kOptimizeFreeConstraintsAndTime,
     kOptimizeTime,
+    kOptimizeFreeConstraintsAndCollision,
     kUnknown
   } objective;
 };
@@ -121,6 +122,7 @@ class OptimizationInfo {
       : n_iterations(0),
         stopping_reason(nlopt::FAILURE),
         cost_trajectory(0),
+        cost_collision(0),
         cost_time(0),
         cost_soft_constraints(0),
         optimization_time(0) {}
@@ -128,6 +130,7 @@ class OptimizationInfo {
   int n_iterations;
   int stopping_reason;
   double cost_trajectory;
+  double cost_collision;
   double cost_time;
   double cost_soft_constraints;
   double optimization_time;
@@ -246,6 +249,10 @@ class PolynomialOptimizationNonLinear {
           const std::vector<double>& x, std::vector<double>& gradient,
           void* data);
 
+  static double objectiveFunctionFreeConstraintsAndCollision(
+          const std::vector<double>& x, std::vector<double>& gradient,
+          void* data);
+
   static double getCostAndGradientDerivative(
           std::vector<Eigen::VectorXd>* gradients, void* data);
 
@@ -264,6 +271,10 @@ class PolynomialOptimizationNonLinear {
 
   // Does the actual optimization work for optimizing only the Free Constraints.
   int optimizeFreeConstraints();
+
+  // Does the actual optimization work for optimizing the Free Constraints
+  // and for Collision
+  int optimizeFreeConstraintsAndCollision();
 
   // Evaluates the maximum magnitude constraints as soft constraints and
   // returns a cost, depending on the violation of the constraints.

@@ -74,6 +74,10 @@ bool PolynomialOptimizationNonLinear<_N>::setupFromVertices(
     case NonlinearOptimizationParameters::OptimizationObjective::kOptimizeTime:
       n_optimization_parameters = segment_times.size();
       break;
+    case NonlinearOptimizationParameters::OptimizationObjective::kOptimizeFreeConstraintsAndCollision:
+      n_optimization_parameters =
+              poly_opt_.getNumberFreeConstraints() * poly_opt_.getDimension();
+      break;
     default:
       LOG(ERROR) << "Unkown Optimization Objective. Abort.";
       break;
@@ -117,6 +121,9 @@ int PolynomialOptimizationNonLinear<_N>::optimize() {
       break;
     case NonlinearOptimizationParameters::OptimizationObjective::kOptimizeTime:
       result = optimizeTime();
+      break;
+    case NonlinearOptimizationParameters::OptimizationObjective::kOptimizeFreeConstraintsAndCollision:
+      result = optimizeFreeConstraintsAndCollision();
       break;
     default:
       LOG(ERROR) << "Unkown Optimization Objective. Abort.";
@@ -220,6 +227,69 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraints() {
     nlopt_->set_min_objective(&PolynomialOptimizationNonLinear<
                                       N>::objectiveFunctionFreeConstraints,
                               this);
+  } catch (std::exception& e) {
+    LOG(ERROR) << "error while setting up nlopt: " << e.what() << std::endl;
+    return nlopt::FAILURE;
+  }
+
+  double final_cost = std::numeric_limits<double>::max();
+  int result;
+
+  try {
+    timing::Timer timer_solve("optimize_nonlinear_full_total_time");
+    result = nlopt_->optimize(initial_solution, final_cost);
+    timer_solve.Stop();
+  } catch (std::exception& e) {
+    LOG(ERROR) << "error while running nlopt: " << e.what() << std::endl;
+    return nlopt::FAILURE;
+  }
+
+  return result;
+}
+
+template <int _N>
+int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
+  std::vector<double> initial_step, initial_solution, lower_bounds,
+          upper_bounds;
+
+  // compute initial solution
+  poly_opt_.solveLinear();
+  std::vector<Eigen::VectorXd> free_constraints;
+  poly_opt_.getFreeConstraints(&free_constraints);
+  CHECK(free_constraints.size() > 0);
+  CHECK(free_constraints.front().size() > 0);
+
+  const size_t n_optmization_variables =
+          free_constraints.size() * free_constraints.front().size();
+
+  initial_solution.reserve(n_optmization_variables);
+  initial_step.reserve(n_optmization_variables);
+  lower_bounds.reserve(n_optmization_variables);
+  upper_bounds.reserve(n_optmization_variables);
+
+  for (const Eigen::VectorXd& c : free_constraints) {
+    for (int i = 0; i < c.size(); ++i) {
+      initial_solution.push_back(c[i]);
+    }
+  }
+
+  initial_step.reserve(n_optmization_variables);
+  for (double x : initial_solution) {
+    const double abs_x = std::abs(x);
+    initial_step.push_back(optimization_parameters_.initial_stepsize_rel *
+                           abs_x);
+    lower_bounds.push_back(-abs_x * 2);
+    upper_bounds.push_back(abs_x * 2);
+  }
+
+  try {
+    nlopt_->set_initial_step(initial_step);
+    nlopt_->set_lower_bounds(lower_bounds);
+    nlopt_->set_upper_bounds(upper_bounds);
+    nlopt_->set_min_objective(
+            &PolynomialOptimizationNonLinear<
+                    N>::objectiveFunctionFreeConstraintsAndCollision,
+            this);
   } catch (std::exception& e) {
     LOG(ERROR) << "error while setting up nlopt: " << e.what() << std::endl;
     return nlopt::FAILURE;
@@ -552,6 +622,106 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraints(
   }
 
   return cost_trajectory + cost_time + cost_constraints;
+}
+
+template <int _N>
+double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndCollision(
+        const std::vector<double>& x, std::vector<double>& gradient, void* data) {
+  CHECK_NOTNULL(data);
+
+  PolynomialOptimizationNonLinear<N>* optimization_data =
+          static_cast<PolynomialOptimizationNonLinear<N>*>(data);  // wheee ...
+
+  const size_t n_free_constraints =
+          optimization_data->poly_opt_.getNumberFreeConstraints();
+  const size_t dim = optimization_data->poly_opt_.getDimension();
+
+  CHECK_EQ(x.size(), n_free_constraints * dim);
+
+  std::vector<Eigen::VectorXd> free_constraints;
+  free_constraints.resize(dim);
+
+  for (size_t d = 0; d < dim; ++d) {
+    const size_t idx_start = d * n_free_constraints;
+
+    Eigen::VectorXd& free_constraints_dim = free_constraints[d];
+    free_constraints_dim.resize(n_free_constraints, Eigen::NoChange);
+    for (size_t i = 0; i < n_free_constraints; ++i) {
+      free_constraints_dim[i] = x[idx_start + i];
+    }
+  }
+
+  optimization_data->poly_opt_.setFreeConstraints(free_constraints);
+
+  std::vector<Eigen::VectorXd> grad_d, grad_c;
+  double J_d = 0.0;
+  double J_c = 0.0;
+  if (!gradient.empty()) {
+    J_d = optimization_data->getCostAndGradientDerivative(
+            &grad_d, optimization_data);
+    J_c = optimization_data->getCostAndGradientCollision(
+            &grad_c, optimization_data);
+  } else {
+    J_d = optimization_data->getCostAndGradientDerivative(
+            NULL, optimization_data);
+    J_c = optimization_data->getCostAndGradientCollision(
+            NULL, optimization_data);
+  }
+
+  // TODO: get rid after testing
+  double cost_trajectory2 = optimization_data->poly_opt_.computeCost();
+  double cost_trajectory = J_d;
+  double cost_collision = J_c;
+  double cost_time = 0.0;
+  double cost_constraints = 0.0;
+
+  if (optimization_data->optimization_parameters_.use_soft_constraints) {
+    cost_constraints =
+        optimization_data->evaluateMaximumMagnitudeAsSoftConstraint(
+            optimization_data->inequality_constraints_,
+            optimization_data->optimization_parameters_.soft_constraint_weight);
+  }
+
+  if (optimization_data->optimization_parameters_.print_debug_info) {
+    std::cout << "---- cost at iteration "
+              << optimization_data->optimization_info_.n_iterations << "---- "
+              << std::endl;
+    std::cout << "  trajectory: " << cost_trajectory << std::endl;
+    std::cout << "  computeCost(): " << cost_trajectory2 << std::endl;
+    std::cout << "  collision: " << cost_collision << std::endl;
+    std::cout << "  time: " << cost_time << std::endl;
+    std::cout << "  constraints: " << cost_constraints << std::endl;
+    std::cout << "  sum: " << cost_trajectory + cost_time + cost_constraints
+              << std::endl;
+  }
+
+  optimization_data->optimization_info_.n_iterations++;
+  optimization_data->optimization_info_.cost_trajectory = cost_trajectory;
+  optimization_data->optimization_info_.cost_collision = cost_collision;
+  optimization_data->optimization_info_.cost_time = cost_time;
+  optimization_data->optimization_info_.cost_soft_constraints =
+          cost_constraints;
+
+  if (!gradient.empty()) {
+    gradient.clear();
+    gradient.resize(3*n_free_constraints);
+
+    // TODO: Parameterize
+    double w_d = 0.5;
+    double w_c = 0.5;
+
+    for (int i = 0; i < n_free_constraints; ++i) {
+      gradient[0 * n_free_constraints + i] =
+              w_d * grad_d[0][i] + w_c * grad_c[0][i];
+      gradient[1 * n_free_constraints + i] =
+              w_d * grad_d[1][i] + w_c * grad_c[1][i];
+      gradient[2 * n_free_constraints + i] =
+              w_d * grad_d[2][i] + w_c * grad_c[2][i];
+    }
+  }
+
+  // TODO: Clean not needed terms (ie cost_time) everywhere
+  return cost_trajectory + cost_collision + cost_time + cost_constraints;
 }
 
 template <int _N>
