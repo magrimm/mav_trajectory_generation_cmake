@@ -803,6 +803,63 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientDerivative(
 }
 
 template <int _N>
+double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
+        std::vector<Eigen::VectorXd>* gradients, void* opt_data) {
+
+  PolynomialOptimizationNonLinear<N>* data =
+          static_cast<PolynomialOptimizationNonLinear<N>*>(opt_data);
+
+  // Compare the two approaches:
+  // getCost() and the full matrix.
+  const size_t n_segments = data->poly_opt_.getNumberSegments();
+  const size_t n_free_constraints = data->poly_opt_.getNumberFreeConstraints();
+  const size_t n_fixed_constraints = data->poly_opt_.getNumberFixedConstraints();
+  const size_t dim = data->poly_opt_.getDimension();
+
+  double J_c = 0.0;
+  std::vector<Eigen::VectorXd> grad_c(dim, Eigen::VectorXd::Zero(n_free_constraints));
+
+  // Get d_p and d_f vector for all axes.
+  std::vector<Eigen::VectorXd> d_p_vec;
+  std::vector<Eigen::VectorXd> d_f_vec;
+
+  // Figure out if we should have polyopt keep track of d_ps
+  // or us keep track of d_ps over iterations.
+  data->poly_opt_.getFreeConstraints(&d_p_vec);
+  data->poly_opt_.getFixedConstraints(&d_f_vec);
+
+
+  /////////////////////////////////////////////////////////////////////////////
+  // Compute costs over all axes.
+  for (int k = 0; k < dim; ++k) {
+    // Get a copy of d_p and d_f for this axis.
+    const Eigen::VectorXd& d_p = d_p_vec[k];
+    const Eigen::VectorXd& d_f = d_f_vec[k];
+
+
+    // And get the gradient.
+    // Should really separate these out by k.
+    grad_c[k] = Eigen::VectorXd::Zero(n_free_constraints);
+  }
+  /////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+  if (gradients != NULL) {
+    gradients->clear();
+    gradients->resize(dim);
+
+    for (int k = 0; k < dim; ++k) {
+      (*gradients)[k] = grad_c[k];
+    }
+  }
+
+  return J_c;
+}
+
+template <int _N>
 double PolynomialOptimizationNonLinear<_N>::evaluateMaximumMagnitudeConstraint(
     const std::vector<double>& segment_times, std::vector<double>& gradient,
     void* data) {

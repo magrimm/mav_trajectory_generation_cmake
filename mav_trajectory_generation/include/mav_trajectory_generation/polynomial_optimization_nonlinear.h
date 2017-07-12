@@ -256,6 +256,9 @@ class PolynomialOptimizationNonLinear {
   static double getCostAndGradientDerivative(
           std::vector<Eigen::VectorXd>* gradients, void* data);
 
+  static double getCostAndGradientCollision(
+          std::vector<Eigen::VectorXd>* gradients, void* data);
+
   // Evaluates the maximum magnitude constraint at the current value of
   // the optimization variables.
   // All input parameters are ignored, all information is contained in data.
