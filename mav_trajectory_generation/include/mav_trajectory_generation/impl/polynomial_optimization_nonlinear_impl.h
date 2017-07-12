@@ -972,6 +972,30 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
   return J_c;
 }
 
+
+template <int _N>
+double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
+        const Eigen::VectorXd& position, Eigen::VectorXd* gradient,
+        void* opt_data) {
+
+  PolynomialOptimizationNonLinear<N>* data =
+          static_cast<PolynomialOptimizationNonLinear<N>*>(opt_data);
+
+  const size_t dim = data->poly_opt_.getDimension();
+
+  Eigen::VectorXd grad_c_esdf(dim);
+  grad_c_esdf.setZero();
+
+  double distance = 0.0; // Get distance from collision at current position
+  double J_c_esdf = 0.0; // Get potential cost from distance to collision
+  if (gradient != NULL) {
+
+    *gradient = grad_c_esdf;
+  }
+
+  return J_c_esdf;
+}
+
 template <int _N>
 double PolynomialOptimizationNonLinear<_N>::evaluateMaximumMagnitudeConstraint(
     const std::vector<double>& segment_times, std::vector<double>& gradient,
