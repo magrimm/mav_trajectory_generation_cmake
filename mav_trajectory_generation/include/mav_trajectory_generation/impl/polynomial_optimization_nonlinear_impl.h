@@ -857,7 +857,13 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
     p_all_segments[k] = data->L_ * d_all_segments;
   }
 
+  std::vector<double> segment_times;
+  data->poly_opt_.getSegmentTimes(&segment_times);
 
+  // Get the correct L block to calculate derivatives.
+  Eigen::Block<Eigen::MatrixXd> L_pp =
+          data->L_.block(0, n_fixed_constraints,
+                         data->L_.rows(), n_free_constraints);
 
 
 
