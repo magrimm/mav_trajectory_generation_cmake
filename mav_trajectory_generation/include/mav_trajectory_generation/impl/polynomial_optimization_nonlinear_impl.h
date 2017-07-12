@@ -872,6 +872,13 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
                          data->L_.rows(), n_free_constraints);
 
   double dt = 0.1; // TODO: parameterize
+  double dist_sum_limit = 0.05; // TODO: parameterize map resolution
+
+  Eigen::VectorXd prev_pos(dim);
+  prev_pos.setZero();
+  // sum --> numerical integral
+  double time_sum = -1;
+  double dist_sum = 0;
   double t = 0.0;
   for (int i = 0; i < n_segments; ++i) {
     for (t = 0.0; t < segment_times[i]; t += dt) {
@@ -894,6 +901,22 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
 
         pos(k) = (T.transpose() * p_k)(0);
         vel(k) = (T.transpose() * data->V_ * p_k)(0);
+      }
+
+      // Numerical integration
+      if (time_sum < 0) {
+        // Skip first entry
+        time_sum = 0.0;
+        prev_pos = pos;
+        continue;
+      }
+
+      time_sum += dt;
+      dist_sum += (pos - prev_pos).norm();
+      prev_pos = pos;
+
+      if (dist_sum < dist_sum_limit) {
+        continue;
       }
     }
   }
