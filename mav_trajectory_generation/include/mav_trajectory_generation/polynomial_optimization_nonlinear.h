@@ -318,6 +318,10 @@ class PolynomialOptimizationNonLinear {
   Vertex::Vector vertices_;
 
   int derivative_to_optimize_;
+
+  // L = A_inv * M
+  Eigen::MatrixXd L_;
+  Eigen::MatrixXd V_;
 };
 
 }  // namespace mav_trajectory_generation

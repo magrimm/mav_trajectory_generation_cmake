@@ -267,6 +267,26 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
   lower_bounds.reserve(n_optmization_variables);
   upper_bounds.reserve(n_optmization_variables);
 
+  // Calculate L
+  Eigen::MatrixXd M, A_inv;
+  poly_opt_.getM(&M);
+  poly_opt_.getAInverse(&A_inv);
+
+  L_ = A_inv * M;
+
+  // Calculate matrix for mapping vector of polynomial coefficients of a
+  // function to the polynomial coefficients of its derivative.
+  // [0 1 0 0 0 ...]
+  // [0 0 2 0 0 ...]
+  // [0 0 0 3 0 ...]
+  // [0 0 0 0 4 ...]
+  // [  ...   ...  ]
+  V_.resize(N, N);
+  V_.setZero();
+  for (int i = 0; i < V_.diagonal(1).size(); ++i) {
+    V_.diagonal(1)(i) = (i + 1) % N;
+  }
+
   for (const Eigen::VectorXd& c : free_constraints) {
     for (int i = 0; i < c.size(); ++i) {
       initial_solution.push_back(c[i]);
