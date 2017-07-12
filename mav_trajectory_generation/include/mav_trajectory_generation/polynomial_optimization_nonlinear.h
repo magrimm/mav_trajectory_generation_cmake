@@ -246,7 +246,7 @@ class PolynomialOptimizationNonLinear {
           const std::vector<double>& x, std::vector<double>& gradient,
           void* data);
 
-  static double computeDerivativeCostAndGradient(
+  static double getCostAndGradientDerivative(
           std::vector<Eigen::VectorXd>* gradients, void* data);
 
   // Evaluates the maximum magnitude constraint at the current value of

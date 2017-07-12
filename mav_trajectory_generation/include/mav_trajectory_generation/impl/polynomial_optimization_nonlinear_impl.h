@@ -502,10 +502,10 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraints(
   std::vector<Eigen::VectorXd> grad_d;
   double J_d = 0.0;
   if (!gradient.empty()) {
-    J_d = optimization_data->computeDerivativeCostAndGradient(
+    J_d = optimization_data->getCostAndGradientDerivative(
             &grad_d, optimization_data);
   } else {
-    J_d = optimization_data->computeDerivativeCostAndGradient(
+    J_d = optimization_data->getCostAndGradientDerivative(
             NULL, optimization_data);
   }
 
@@ -555,7 +555,7 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraints(
 }
 
 template <int _N>
-double PolynomialOptimizationNonLinear<_N>::computeDerivativeCostAndGradient(
+double PolynomialOptimizationNonLinear<_N>::getCostAndGradientDerivative(
         std::vector<Eigen::VectorXd>* gradients, void* opt_data) {
 
   PolynomialOptimizationNonLinear<N>* data =
