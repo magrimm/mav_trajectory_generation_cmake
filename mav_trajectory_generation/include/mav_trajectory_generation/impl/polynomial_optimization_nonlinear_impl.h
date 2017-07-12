@@ -865,8 +865,20 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
           data->L_.block(0, n_fixed_constraints,
                          data->L_.rows(), n_free_constraints);
 
+  double dt = 0.1; // TODO: parameterize
+  double t = 0.0;
+  for (int i = 0; i < n_segments; ++i) {
+    for (t = 0.0; t < segment_times[i]; t += dt) {
 
+      // 2) Calculate the T vector (see paper equation (8)) for each segment
+      Eigen::VectorXd T; // Is supposed to be a column-vector
+      T.resize(N);
+      for (int n = 0; n < N; ++n) {
+        T[n] = pow(t, n);
+      }
 
+    }
+  }
   
   if (gradients != NULL) {
     gradients->clear();
