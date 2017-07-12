@@ -607,9 +607,9 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraints(
 
   if (optimization_data->optimization_parameters_.use_soft_constraints) {
     cost_constraints =
-        optimization_data->evaluateMaximumMagnitudeAsSoftConstraint(
-            optimization_data->inequality_constraints_,
-            optimization_data->optimization_parameters_.soft_constraint_weight);
+            optimization_data->evaluateMaximumMagnitudeAsSoftConstraint(
+                    optimization_data->inequality_constraints_,
+                    optimization_data->optimization_parameters_.soft_constraint_weight);
   }
 
   if (optimization_data->optimization_parameters_.print_debug_info) {
@@ -840,33 +840,21 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
   std::vector<Eigen::VectorXd> grad_c(dim, Eigen::VectorXd::Zero(n_free_constraints));
 
   // Get d_p and d_f vector for all axes.
-  std::vector<Eigen::VectorXd> d_p_vec;
-  std::vector<Eigen::VectorXd> d_f_vec;
-
   // Figure out if we should have polyopt keep track of d_ps
   // or us keep track of d_ps over iterations.
+  std::vector<Eigen::VectorXd> d_p_vec, d_f_vec;
   data->poly_opt_.getFreeConstraints(&d_p_vec);
   data->poly_opt_.getFixedConstraints(&d_f_vec);
 
-
-  /////////////////////////////////////////////////////////////////////////////
-  // Compute costs over all axes.
   for (int k = 0; k < dim; ++k) {
-    // Get a copy of d_p and d_f for this axis.
-    const Eigen::VectorXd& d_p = d_p_vec[k];
-    const Eigen::VectorXd& d_f = d_f_vec[k];
 
-
-    // And get the gradient.
-    // Should really separate these out by k.
-    grad_c[k] = Eigen::VectorXd::Zero(n_free_constraints);
   }
-  /////////////////////////////////////////////////////////////////////////////
 
 
 
 
 
+  
   if (gradients != NULL) {
     gradients->clear();
     gradients->resize(dim);
