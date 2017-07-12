@@ -933,6 +933,22 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
       double J_c_i_t = c * vel.norm() * time_sum;
 
       J_c += J_c_i_t;
+
+      if (gradients != NULL) {
+        // Norm has to be non-zero
+        if (vel.norm() > 1e-6) {
+          // Calculate gradient per axis
+          for (int k = 0; k < dim; ++k) {
+            // See paper equation (14)
+            Eigen::VectorXd grad_c_k =
+                    (vel.norm() * time_sum * grad_c_d_f(k) * T.transpose() * L_pp +
+                            time_sum * c * vel(k) / vel.norm() * T.transpose() *
+                                    data->V_all_segments_ * L_pp).transpose();
+
+            grad_c[k] += grad_c_k;
+          }
+        }
+      }
     }
   }
   
