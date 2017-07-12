@@ -929,6 +929,10 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
         c = getCostAndGradientPotentialESDF(pos, NULL, data);
       }
 
+      // Cost per segment and time sample
+      double J_c_i_t = c * vel.norm() * time_sum;
+
+      J_c += J_c_i_t;
     }
   }
   
