@@ -949,9 +949,17 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
           }
         }
       }
+
+      // Clear numeric integrals
+      dist_sum = 0.0;
+      time_sum = 0.0;
+      prev_pos = pos;
     }
+
+    // Make sure the dt is correct for the next segment:
+    time_sum += -dt + (segment_times[i] - t);
   }
-  
+
   if (gradients != NULL) {
     gradients->clear();
     gradients->resize(dim);
