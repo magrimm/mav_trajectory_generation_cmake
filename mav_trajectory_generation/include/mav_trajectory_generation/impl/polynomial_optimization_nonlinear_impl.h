@@ -726,8 +726,8 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
     std::cout << "  collision: " << cost_collision << std::endl;
     std::cout << "  time: " << cost_time << std::endl;
     std::cout << "  constraints: " << cost_constraints << std::endl;
-    std::cout << "  sum: " << cost_trajectory + cost_time + cost_constraints
-              << std::endl;
+    std::cout << "  sum: " << cost_trajectory + cost_collision + cost_time +
+            cost_constraints << std::endl;
   }
 
   optimization_data->optimization_info_.n_iterations++;
