@@ -708,6 +708,16 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
             optimization_data->optimization_parameters_.soft_constraint_weight);
   }
 
+  // TODO: Parameterize
+  double w_d = 0.1;
+  double w_c = 10.0;
+  double w_t = 1.0;
+  double w_sc = 1.0;
+  cost_trajectory *= w_d;
+  cost_collision *= w_c;
+  cost_time *= w_t;
+  cost_constraints *= w_sc;
+
   if (optimization_data->optimization_parameters_.print_debug_info) {
     std::cout << "---- cost at iteration "
               << optimization_data->optimization_info_.n_iterations << "---- "
@@ -730,10 +740,6 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
   if (!gradient.empty()) {
     gradient.clear();
     gradient.resize(3*n_free_constraints);
-
-    // TODO: Parameterize
-    double w_d = 0.5;
-    double w_c = 0.5;
 
     for (int i = 0; i < n_free_constraints; ++i) {
       gradient[0 * n_free_constraints + i] =
