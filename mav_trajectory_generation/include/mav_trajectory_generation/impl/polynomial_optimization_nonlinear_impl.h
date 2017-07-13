@@ -32,6 +32,7 @@ inline void OptimizationInfo::print(std::ostream& stream) const {
   stream << "  stopping reason:       "
          << nlopt::returnValueToString(stopping_reason) << std::endl;
   stream << "  cost trajectory:       " << cost_trajectory << std::endl;
+  stream << "  cost collision:        " << cost_collision << std::endl;
   stream << "  cost time:             " << cost_time << std::endl;
   stream << "  cost soft constraints: " << cost_soft_constraints << std::endl;
   stream << "  maxima: " << std::endl;
@@ -79,7 +80,7 @@ bool PolynomialOptimizationNonLinear<_N>::setupFromVertices(
               poly_opt_.getNumberFreeConstraints() * poly_opt_.getDimension();
       break;
     default:
-      LOG(ERROR) << "Unkown Optimization Objective. Abort.";
+      LOG(ERROR) << "Unknown Optimization Objective. Abort.";
       break;
   }
 
@@ -126,7 +127,7 @@ int PolynomialOptimizationNonLinear<_N>::optimize() {
       result = optimizeFreeConstraintsAndCollision();
       break;
     default:
-      LOG(ERROR) << "Unkown Optimization Objective. Abort.";
+      LOG(ERROR) << "Unknown Optimization Objective. Abort.";
       break;
   }
 
