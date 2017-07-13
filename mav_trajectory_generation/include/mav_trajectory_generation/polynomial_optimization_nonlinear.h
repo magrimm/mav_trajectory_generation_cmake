@@ -269,6 +269,8 @@ class PolynomialOptimizationNonLinear {
           const Eigen::VectorXd& position, Eigen::VectorXd* gradient,
           void* data);
 
+  double getCostPotential(double collision_distance);
+
   // Evaluates the maximum magnitude constraint at the current value of
   // the optimization variables.
   // All input parameters are ignored, all information is contained in data.

@@ -1003,6 +1003,30 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
 }
 
 template <int _N>
+double PolynomialOptimizationNonLinear<_N>::getCostPotential(
+        double collision_distance) {
+
+  double cost = 0.0;
+
+  // TODO: paramterize
+  double epsilon = 0.5;
+  double robot_size = 0.8;
+  double robot_radius = std::sqrt(3) * robot_size/2.0;
+
+  collision_distance -= robot_radius;
+  if (collision_distance < 0.0) {
+    cost = -collision_distance + 0.5 * epsilon;
+  } else if (collision_distance <= epsilon) {
+    double epsilon_distance = collision_distance - epsilon;
+    cost = 0.5 * 1.0 / epsilon * epsilon_distance * epsilon_distance;
+  } else {
+    cost = 0.0;
+  }
+
+  return cost;
+}
+
+template <int _N>
 double PolynomialOptimizationNonLinear<_N>::evaluateMaximumMagnitudeConstraint(
     const std::vector<double>& segment_times, std::vector<double>& gradient,
     void* data) {
