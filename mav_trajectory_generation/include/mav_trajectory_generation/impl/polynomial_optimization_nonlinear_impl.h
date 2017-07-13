@@ -991,9 +991,10 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
   Eigen::VectorXd grad_c_esdf(dim);
   grad_c_esdf.setZero();
 
-  double J_c_esdf = 0.0; // Get potential cost from distance to collision
   // Get distance from collision at current position
   double distance = data->sdf_.Get(position[0], position[1], position[2]);
+  // Get potential cost from distance to collision
+  double J_c_esdf = data->getCostPotential(distance);
   if (gradient != NULL) {
 
     *gradient = grad_c_esdf;
