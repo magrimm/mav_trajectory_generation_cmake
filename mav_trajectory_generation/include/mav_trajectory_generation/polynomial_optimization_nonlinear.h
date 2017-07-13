@@ -23,6 +23,7 @@
 
 #include <memory>
 #include <nlopt.hpp>
+#include <sdf_tools/sdf.hpp>
 
 #include "mav_trajectory_generation/polynomial_optimization_linear.h"
 
@@ -209,6 +210,11 @@ class PolynomialOptimizationNonLinear {
 
   OptimizationInfo getOptimizationInfo() const { return optimization_info_; }
 
+  // Set the signed distance field.
+  void setSDF(const sdf_tools::SignedDistanceField& sdf) {
+    sdf_ = sdf;
+  };
+
  private:
   // Holds the data for constraint evaluation, since these methods are
   // static.
@@ -330,6 +336,8 @@ class PolynomialOptimizationNonLinear {
   // the polynomail coefficients of its derivative
   Eigen::MatrixXd V_;
   Eigen::MatrixXd V_all_segments_;
+
+  sdf_tools::SignedDistanceField sdf_; // Signed Distance Field
 };
 
 }  // namespace mav_trajectory_generation
