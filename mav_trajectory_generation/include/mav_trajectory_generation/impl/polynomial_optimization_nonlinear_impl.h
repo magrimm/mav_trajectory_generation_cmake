@@ -696,7 +696,6 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
   }
 
   // TODO: get rid after testing
-  double cost_trajectory2 = optimization_data->poly_opt_.computeCost();
   double cost_trajectory = J_d;
   double cost_collision = J_c;
   double cost_time = 0.0;
@@ -714,7 +713,6 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
               << optimization_data->optimization_info_.n_iterations << "---- "
               << std::endl;
     std::cout << "  trajectory: " << cost_trajectory << std::endl;
-    std::cout << "  computeCost(): " << cost_trajectory2 << std::endl;
     std::cout << "  collision: " << cost_collision << std::endl;
     std::cout << "  time: " << cost_time << std::endl;
     std::cout << "  constraints: " << cost_constraints << std::endl;
