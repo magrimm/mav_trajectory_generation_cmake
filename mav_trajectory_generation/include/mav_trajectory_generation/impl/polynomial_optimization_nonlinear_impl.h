@@ -272,7 +272,7 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
   poly_opt_.getM(&M);
   poly_opt_.getAInverse(&A_inv);
 
-  L_ = A_inv * M;
+  L_ = Eigen::MatrixXd(A_inv * M);
 
   // Calculate matrix for mapping vector of polynomial coefficients of a
   // function to the polynomial coefficients of its derivative.
