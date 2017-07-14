@@ -109,6 +109,8 @@ struct NonlinearOptimizationParameters {
   // kOptimizeFreeConstraintsAndTime: Both segment times and free
   // derivatives become optimization variables. This case is
   // theoretically correct, but may result in more iterations.
+  // kOptimizeFreeConstraintsAndCollision: The free derivatives are optimized
+  // with cost for the derivatives and cost for the colliison potential
   enum OptimizationObjective {
     kOptimizeFreeConstraints,
     kOptimizeFreeConstraintsAndTime,

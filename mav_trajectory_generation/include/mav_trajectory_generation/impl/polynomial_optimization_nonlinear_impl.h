@@ -695,9 +695,10 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
             NULL, optimization_data);
   }
 
+  // TODO: Include soft constraint cost here?
+  double J_sc = 0.0;
   if (optimization_data->optimization_parameters_.use_soft_constraints) {
-    cost_constraints =
-        optimization_data->evaluateMaximumMagnitudeAsSoftConstraint(
+    J_sc = optimization_data->evaluateMaximumMagnitudeAsSoftConstraint(
             optimization_data->inequality_constraints_,
             optimization_data->optimization_parameters_.soft_constraint_weight);
   }
@@ -719,7 +720,7 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
     std::cout << "  trajectory: " << cost_trajectory << std::endl;
     std::cout << "  collision: " << cost_collision << std::endl;
     std::cout << "  constraints: " << cost_constraints << std::endl;
-    std::cout << "  sum: " << cost_trajectory + cost_collision + cost_time +
+    std::cout << "  sum: " << cost_trajectory + cost_collision +
             cost_constraints << std::endl;
   }
 
@@ -912,9 +913,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
       dist_sum += (pos - prev_pos).norm();
       prev_pos = pos;
 
-      if (dist_sum < dist_sum_limit) {
-        continue;
-      }
+      if (dist_sum < dist_sum_limit) { continue; }
 
       // Cost and gradient of potential map from esdf
       Eigen::VectorXd grad_c_d_f(dim); // dc/dd_f
