@@ -890,6 +890,11 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
         T[n] = pow(t, n);
       }
 
+      // Create T for all segemtnts
+      Eigen::VectorXd T_all_seg(n_segments * N);
+      T_all_seg.setZero();
+      T_all_seg.segment(i * N, N) = T;
+
       // 3) Calculate position and velocity (see paper equation (9) and (11))
       Eigen::VectorXd pos(dim), vel(dim);
       pos.setZero();
@@ -939,8 +944,8 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
           for (int k = 0; k < dim; ++k) {
             // See paper equation (14)
             Eigen::VectorXd grad_c_k =
-                    (vel.norm() * time_sum * grad_c_d_f(k) * T.transpose() * L_pp +
-                            time_sum * c * vel(k) / vel.norm() * T.transpose() *
+                    (vel.norm() * time_sum * grad_c_d_f(k) * T_all_seg.transpose() * L_pp +
+                            time_sum * c * vel(k) / vel.norm() * T_all_seg.transpose() *
                                     data->V_all_segments_ * L_pp).transpose();
 
             grad_c[k] += grad_c_k;
