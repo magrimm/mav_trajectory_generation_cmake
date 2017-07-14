@@ -695,11 +695,6 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
             NULL, optimization_data);
   }
 
-  // TODO: get rid after testing
-  double cost_trajectory = J_d;
-  double cost_collision = J_c;
-  double cost_constraints = 0.0;
-
   if (optimization_data->optimization_parameters_.use_soft_constraints) {
     cost_constraints =
         optimization_data->evaluateMaximumMagnitudeAsSoftConstraint(
@@ -707,14 +702,15 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
             optimization_data->optimization_parameters_.soft_constraint_weight);
   }
 
-  // TODO: Parameterize
-  double w_d = 0.1;
-  double w_c = 10.0;
-  double w_t = 1.0;
-  double w_sc = 1.0;
-  cost_trajectory *= w_d;
-  cost_collision *= w_c;
-  cost_constraints *= w_sc;
+  // Weighting terms for different costs
+  double w_d = optimization_data->optimization_parameters_.weights.w_d;
+  double w_c = optimization_data->optimization_parameters_.weights.w_c;
+  double w_sc = optimization_data->optimization_parameters_.weights.w_sc;
+
+  // Get the weighted cost
+  double cost_trajectory = w_d * J_d;
+  double cost_collision = w_c * J_c;
+  double cost_constraints = w_sc * J_sc;
 
   if (optimization_data->optimization_parameters_.print_debug_info) {
     std::cout << "---- cost at iteration "
