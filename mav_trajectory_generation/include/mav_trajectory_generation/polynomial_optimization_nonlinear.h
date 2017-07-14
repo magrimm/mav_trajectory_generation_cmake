@@ -211,7 +211,7 @@ class PolynomialOptimizationNonLinear {
   OptimizationInfo getOptimizationInfo() const { return optimization_info_; }
 
   // Set the signed distance field.
-  void setSDF(const sdf_tools::SignedDistanceField& sdf) {
+  void setSDF(const std::shared_ptr<sdf_tools::SignedDistanceField>& sdf) {
     sdf_ = sdf;
   };
 
@@ -339,7 +339,7 @@ class PolynomialOptimizationNonLinear {
   Eigen::MatrixXd V_;
   Eigen::MatrixXd V_all_segments_;
 
-  sdf_tools::SignedDistanceField sdf_; // Signed Distance Field
+  std::shared_ptr<sdf_tools::SignedDistanceField> sdf_; // Signed Distance Field
 };
 
 }  // namespace mav_trajectory_generation
