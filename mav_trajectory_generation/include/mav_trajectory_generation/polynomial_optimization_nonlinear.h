@@ -48,7 +48,8 @@ struct NonlinearOptimizationParameters {
         use_soft_constraints(true),
         soft_constraint_weight(100.0),
         print_debug_info(false),
-        objective(kOptimizeFreeConstraintsAndTime) {}
+        objective(kOptimizeFreeConstraintsAndTime),
+        weights() {}
 
   // Stopping criteria, if objective function changes less than absolute value.
   // Disabled if negative.
@@ -115,6 +116,17 @@ struct NonlinearOptimizationParameters {
     kOptimizeFreeConstraintsAndCollision,
     kUnknown
   } objective;
+
+  // Struct storing all the weights for the cost and gradients
+  struct cost_weights {
+    // Default constructor
+    cost_weights() : w_d(0.1), w_c(10.0), w_t(1.0), w_sc(1.0) {}
+
+    double w_d;  // Weight for derivative cost
+    double w_c;  // Weight for collision cost
+    double w_t;  // Weight for time cost
+    double w_sc; // Weight for soft constraint cost
+  } weights;
 };
 
 class OptimizationInfo {
