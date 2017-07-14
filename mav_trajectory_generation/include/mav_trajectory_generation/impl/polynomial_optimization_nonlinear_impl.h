@@ -751,6 +751,7 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
 template <int _N>
 double PolynomialOptimizationNonLinear<_N>::getCostAndGradientDerivative(
         std::vector<Eigen::VectorXd>* gradients, void* opt_data) {
+  CHECK_NOTNULL(opt_data);
 
   PolynomialOptimizationNonLinear<N>* data =
           static_cast<PolynomialOptimizationNonLinear<N>*>(opt_data);
@@ -829,6 +830,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientDerivative(
 template <int _N>
 double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
         std::vector<Eigen::VectorXd>* gradients, void* opt_data) {
+  CHECK_NOTNULL(opt_data);
 
   PolynomialOptimizationNonLinear<N>* data =
           static_cast<PolynomialOptimizationNonLinear<N>*>(opt_data);
@@ -973,6 +975,7 @@ template <int _N>
 double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
         const Eigen::VectorXd& position, Eigen::VectorXd* gradient,
         void* opt_data) {
+  CHECK_NOTNULL(opt_data);
 
   PolynomialOptimizationNonLinear<N>* data =
           static_cast<PolynomialOptimizationNonLinear<N>*>(opt_data);
