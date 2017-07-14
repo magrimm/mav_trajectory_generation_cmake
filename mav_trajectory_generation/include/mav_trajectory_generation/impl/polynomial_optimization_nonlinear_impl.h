@@ -980,18 +980,18 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
   PolynomialOptimizationNonLinear<N>* data =
           static_cast<PolynomialOptimizationNonLinear<N>*>(opt_data);
 
-  const size_t dim = data->poly_opt_.getDimension();
-
-  Eigen::VectorXd grad_c_esdf(dim);
-  grad_c_esdf.setZero();
-
   // Get distance from collision at current position
   double distance = data->sdf_->Get(position[0], position[1], position[2]);
+
   // Get potential cost from distance to collision
   double J_c_esdf = data->getCostPotential(distance);
-  if (gradient != NULL) {
 
-    *gradient = grad_c_esdf;
+  if (gradient != NULL) {
+    std::vector<double> grad_c_esdf = data->sdf_->GetGradient3d(position, true);
+
+    (*gradient)[0] = grad_c_esdf[0];
+    (*gradient)[1] = grad_c_esdf[1];
+    (*gradient)[2] = grad_c_esdf[2];
   }
 
   return J_c_esdf;
