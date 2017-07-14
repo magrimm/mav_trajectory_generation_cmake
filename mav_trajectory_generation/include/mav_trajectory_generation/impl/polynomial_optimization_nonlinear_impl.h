@@ -698,7 +698,6 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
   // TODO: get rid after testing
   double cost_trajectory = J_d;
   double cost_collision = J_c;
-  double cost_time = 0.0;
   double cost_constraints = 0.0;
 
   if (optimization_data->optimization_parameters_.use_soft_constraints) {
@@ -715,7 +714,6 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
   double w_sc = 1.0;
   cost_trajectory *= w_d;
   cost_collision *= w_c;
-  cost_time *= w_t;
   cost_constraints *= w_sc;
 
   if (optimization_data->optimization_parameters_.print_debug_info) {
@@ -724,7 +722,6 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
               << std::endl;
     std::cout << "  trajectory: " << cost_trajectory << std::endl;
     std::cout << "  collision: " << cost_collision << std::endl;
-    std::cout << "  time: " << cost_time << std::endl;
     std::cout << "  constraints: " << cost_constraints << std::endl;
     std::cout << "  sum: " << cost_trajectory + cost_collision + cost_time +
             cost_constraints << std::endl;
@@ -733,7 +730,6 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
   optimization_data->optimization_info_.n_iterations++;
   optimization_data->optimization_info_.cost_trajectory = cost_trajectory;
   optimization_data->optimization_info_.cost_collision = cost_collision;
-  optimization_data->optimization_info_.cost_time = cost_time;
   optimization_data->optimization_info_.cost_soft_constraints =
           cost_constraints;
 
@@ -752,7 +748,7 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
   }
 
   // TODO: Clean not needed terms (ie cost_time) everywhere
-  return cost_trajectory + cost_collision + cost_time + cost_constraints;
+  return cost_trajectory + cost_collision + cost_constraints;
 }
 
 template <int _N>
