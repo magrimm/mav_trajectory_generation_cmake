@@ -106,6 +106,12 @@ bool PolynomialOptimizationNonLinear<_N>::solveLinear() {
 }
 
 template <int _N>
+bool PolynomialOptimizationNonLinear<_N
+>::computeInitialSolutionWithoutPositionConstraints() {
+  return true;
+}
+
+template <int _N>
 int PolynomialOptimizationNonLinear<_N>::optimize() {
   optimization_info_ = OptimizationInfo();
   int result = nlopt::FAILURE;

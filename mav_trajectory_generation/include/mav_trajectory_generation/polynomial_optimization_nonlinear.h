@@ -235,6 +235,22 @@ class PolynomialOptimizationNonLinear {
     sdf_ = sdf;
   };
 
+  // Compute the initial solution for the optimization without position
+  // constraints apart from the start and goal vertices.
+  // 1) Get the linear solution with position constraints at all vertices
+  // 2) Get the polynomial coefficients from this solution for each segment
+  // 3) Remove the position constraints from the intermediate vertices (still
+  // fully constrained start and goal)
+  // 4) Re-setup the problem with the new constraints. The position
+  // constraints are now part of d_p the free constraints which are to be
+  // optimized. (Fixed derivatives d_F gets smaller and d_P gets bigger)
+  // 5) Get your new mapping matrix L (p = L*[d_f d_P]^T = A^(-1)*M*[d_f d_P]^T)
+  // 6) Calculate your reordered endpoint-derivatives. d_all = L^(-1) * p_k
+  // where p_k are the old coefficients from the original linear solution and
+  // L the new remapping matrix
+  // 7) Set the new free endpoint-derivatives d_p back in the linear solver.
+  bool computeInitialSolutionWithoutPositionConstraints();
+
  private:
   // Holds the data for constraint evaluation, since these methods are
   // static.
