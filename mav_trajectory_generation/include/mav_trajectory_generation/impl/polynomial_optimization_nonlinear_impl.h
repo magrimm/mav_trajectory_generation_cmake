@@ -131,6 +131,29 @@ bool PolynomialOptimizationNonLinear<_N
     vertices_[k].removeConstraint(
             mav_trajectory_generation::derivative_order::POSITION);
   }
+
+  // 4) Setup poly_opt_ again with new set of constraints
+  std::vector<double> segment_times;
+  poly_opt_.getSegmentTimes(&segment_times);
+  setupFromVertices(vertices_, segment_times, derivative_to_optimize_);
+
+  // TODO: needed? find runtime error
+  // Add inequality constraints again after reset nlopt_
+//  for (const auto& constraint_data : inequality_constraints_) {
+//    if (!optimization_parameters_.use_soft_constraints) {
+//      try {
+//        nlopt_->add_inequality_constraint(
+//                &PolynomialOptimizationNonLinear<
+//                        N>::evaluateMaximumMagnitudeConstraint,
+//                constraint_data.get(),
+//                optimization_parameters_.inequality_constraint_tolerance);
+//      } catch (std::exception& e) {
+//        LOG(ERROR) << "ERROR while setting inequality constraint " << e.what()
+//                   << std::endl;
+//        return false;
+//      }
+//    }
+//  }
   return true;
 }
 
