@@ -29,6 +29,12 @@
 
 namespace mav_trajectory_generation {
 
+// Implements parts of the continuous-time trajectory optimization described
+// in [2]
+// [2]: Continuous-Time Trajectory Optimization for Online UAV Replanning.
+//      Helen Oleynikova, Michael Burri, Zachary Taylor, Juan Nieto, Roland
+// Siegwart and Enric Galceran. IROS 2016
+
 // Class holding all important parameters for nonlinear optimization.
 struct NonlinearOptimizationParameters {
   NonlinearOptimizationParameters()
