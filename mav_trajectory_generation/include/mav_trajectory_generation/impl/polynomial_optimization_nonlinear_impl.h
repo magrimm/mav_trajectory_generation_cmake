@@ -110,6 +110,20 @@ bool PolynomialOptimizationNonLinear<_N
 >::computeInitialSolutionWithoutPositionConstraints() {
   // compute initial solution
   poly_opt_.solveLinear();
+
+  // Get dimension
+  const size_t dim = poly_opt_.getDimension();
+
+  // 2) Get the coefficients from the segments
+  mav_trajectory_generation::Segment::Vector segments;
+  poly_opt_.getSegments(&segments);
+  std::vector<Eigen::VectorXd> p(dim, Eigen::VectorXd(N * segments.size()));
+
+  for (int i = 0; i < dim; ++i) {
+    for (size_t j = 0; j < segments.size(); ++j) {
+      p[i].segment<N>(j * N) = segments[j][i].getCoefficients(0);
+    }
+  }
   return true;
 }
 
