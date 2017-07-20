@@ -175,6 +175,11 @@ bool PolynomialOptimizationNonLinear<_N
     // TODO:  pick out necessary derivatives (test)
     d_p[i] = d_all.tail(n_free_constraints_after);
   }
+
+  // 7) Set free constraints of problem according to initial solution and
+  // removed constraints
+  poly_opt_.setFreeConstraints(d_p);
+
   return true;
 }
 
