@@ -115,6 +115,9 @@ bool PolynomialOptimizationNonLinear<_N
   // Get dimension
   const size_t dim = poly_opt_.getDimension();
 
+  trajectory_initial_.clear();
+  getTrajectory(&trajectory_initial_);
+
   // 2) Get the coefficients from the segments
   mav_trajectory_generation::Segment::Vector segments;
   poly_opt_.getSegments(&segments);
@@ -333,6 +336,8 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
   solve_with_position_constraint_ = true;
   if (solve_with_position_constraint_) {
     poly_opt_.solveLinear();
+    trajectory_initial_.clear();
+    getTrajectory(&trajectory_initial_);
   } else {
     computeInitialSolutionWithoutPositionConstraints();
     // TODO: test if trajectory_initial_ is the same here as in computeInitital

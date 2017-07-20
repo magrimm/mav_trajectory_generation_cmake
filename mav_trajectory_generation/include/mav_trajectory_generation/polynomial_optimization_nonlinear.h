@@ -216,6 +216,14 @@ class PolynomialOptimizationNonLinear {
     poly_opt_.getTrajectory(trajectory);
   }
 
+  // Get the trajectory of the initial solution given to the nonlinear solver
+  void getInitialSolutionTrajectory(Trajectory* trajectory) const {
+    CHECK_NOTNULL(trajectory);
+    Segment::Vector segments;
+    trajectory_initial_.getSegments(&segments);
+    trajectory->setSegments(segments);
+  }
+
   // Returns a const reference to the underlying linear optimization
   // object.
   const PolynomialOptimization<N>& getPolynomialOptimizationRef() const {
@@ -427,6 +435,9 @@ class PolynomialOptimizationNonLinear {
   // Do we solve with or without position constraints for the vertices
   // betwenn start and goal?
   bool solve_with_position_constraint_;
+
+  // Linear solution / Initial guess
+  Trajectory trajectory_initial_;
 };
 
 }  // namespace mav_trajectory_generation
