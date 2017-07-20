@@ -108,6 +108,8 @@ bool PolynomialOptimizationNonLinear<_N>::solveLinear() {
 template <int _N>
 bool PolynomialOptimizationNonLinear<_N
 >::computeInitialSolutionWithoutPositionConstraints() {
+  // compute initial solution
+  poly_opt_.solveLinear();
   return true;
 }
 
