@@ -124,6 +124,13 @@ bool PolynomialOptimizationNonLinear<_N
       p[i].segment<N>(j * N) = segments[j][i].getCoefficients(0);
     }
   }
+
+  // 3) Remove all position constraints apart from start and goal
+  Vertex::Vector vertices = vertices_;
+  for (int k = 1; k < vertices.size() - 1 ; ++k) {
+    vertices_[k].removeConstraint(
+            mav_trajectory_generation::derivative_order::POSITION);
+  }
   return true;
 }
 
