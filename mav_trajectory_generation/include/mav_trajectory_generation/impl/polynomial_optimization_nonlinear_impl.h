@@ -154,6 +154,27 @@ bool PolynomialOptimizationNonLinear<_N
 //      }
 //    }
 //  }
+
+  // TODO: move to linear solver. add method setFreeConstraintsFromCoefficients
+  // 5) Get your new mapping matrix L (p = L*[d_f d_P]^T = A^(-1)*M*[d_f d_P]^T)
+  // Fixed constraints are the same except plus the position constraints we
+  // removed. Add those removed position constraints to free derivatives.
+  Eigen::MatrixXd M, M_pinv, A, A_inv;
+  poly_opt_.getA(&A);
+  poly_opt_.getMpinv(&M_pinv);
+
+  const int n_constraints_per_vertex = N / 2; // Num constraints per vertex
+  // 6) Calculate your reordered endpoint-derivatives. d_all = L^(-1) * p_k
+  // where p_k are the old coefficients from the original linear solution and
+  // L the new remapping matrix
+  // d_all has the same size before and after removing constraints
+  Eigen::VectorXd d_all(n_fixed_constraints + n_free_constraints);
+  std::vector<Eigen::VectorXd> d_p(dim, Eigen::VectorXd(n_free_constraints_after));
+  for (int i = 0; i < dim; ++i) {
+    d_all = M_pinv * A * p[i]; // Old coeff p, but new ordering M_pinv * A
+    // TODO:  pick out necessary derivatives (test)
+    d_p[i] = d_all.tail(n_free_constraints_after);
+  }
   return true;
 }
 
