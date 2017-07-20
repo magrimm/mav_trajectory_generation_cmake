@@ -277,11 +277,11 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
 
   // Calculate matrix for mapping vector of polynomial coefficients of a
   // function to the polynomial coefficients of its derivative.
-  // [0 1 0 0 0 ...]
-  // [0 0 2 0 0 ...]
-  // [0 0 0 3 0 ...]
-  // [0 0 0 0 4 ...]
-  // [  ...   ...  ]
+  // [0 1 0 0 0 ...]              f_k(t) = a0 + a1*t + a2*t^2 + a3*t^3 + ...
+  // [0 0 2 0 0 ...]          df_k(t)/dt =      a1   + 2*a2*t + 3*a3*t^2 + ...
+  // [0 0 0 3 0 ...]                    with T = [t^0 t^1 t^2 t^3 t^4 ...]
+  // [0 0 0 0 4 ...]            -->     f_k(t) = T * p_k
+  // [  ...   ...  ]            --> df_k(t)/dt = T * V * p_k
   size_t n_segments = poly_opt_.getNumberSegments();
 
   V_all_segments_.resize(n_segments * N, n_segments * N);

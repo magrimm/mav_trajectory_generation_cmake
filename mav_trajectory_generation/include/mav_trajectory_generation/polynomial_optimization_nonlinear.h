@@ -230,7 +230,7 @@ class PolynomialOptimizationNonLinear {
 
   OptimizationInfo getOptimizationInfo() const { return optimization_info_; }
 
-  // Set the signed distance field.
+  // Set the signed distance field needed for collision potential optimization.
   void setSDF(const std::shared_ptr<sdf_tools::SignedDistanceField>& sdf) {
     sdf_ = sdf;
   };
@@ -247,8 +247,9 @@ class PolynomialOptimizationNonLinear {
   // Objective function for the time-only version.
   // Input: segment_times = Segment times in the current iteration.
   // Input: gradient = Gradient of the objective function w.r.t. changes of
-  // parameters. We can't compute the gradient analytically here.
-  // Thus, only gradient-free optimization methods are possible.
+  // parameters.
+  // We CANNOT compute the gradient analytically here.
+  // --> Thus, only gradient-free optimization methods are possible.
   // Input: Custom data pointer = In our case, it's an ConstraintData object.
   // Output: Cost = based on the parameters passed in.
   static double objectiveFunctionTime(const std::vector<double>& segment_times,
@@ -262,8 +263,9 @@ class PolynomialOptimizationNonLinear {
   // The variables (time, derivatives) are stacked as follows: [segment_times
   // derivatives_dim_0 ... derivatives_dim_N]
   // Input: gradient = Gradient of the objective function wrt. changes of
-  // parameters. We can't compute the gradient analytically here.
-  // Thus, only gradient free optimization methods are possible.
+  // parameters.
+  // We CANNOT compute the gradient analytically here.
+  // --> Thus, only gradient free optimization methods are possible.
   // Input: data = Custom data pointer. In our case, it's an ConstraintData
   // object.
   // Output: Cost based on the parameters passed in.
@@ -271,24 +273,60 @@ class PolynomialOptimizationNonLinear {
       const std::vector<double>& optimization_variables,
       std::vector<double>& gradient, void* data);
 
+  // Objective function for optimizing only the free endpoint-derivatives.
+  // Input: optimization_variables = Optimization variables in the current
+  // iteration.
+  // The variables (derivatives) are stacked as follows: [derivatives_dim_0
+  // ...  derivatives_dim_N]
+  // Input: gradient = Gradient of the objective function wrt. changes of
+  // parameters.
+  // We CAN compute the gradient analytically here.
+  // --> Thus, gradient-free and gradient-based optimization methods are
+  // possible.
+  // Input: data = Custom data pointer. In our case, it's an ConstraintData
+  // object.
+  // Output: Cost and gradients (only for gradient-based optimization) based
+  // on the parameters passed in.
   static double objectiveFunctionFreeConstraints(
           const std::vector<double>& x, std::vector<double>& gradient,
           void* data);
 
+  // Objective function for optimizing the free endpoint-derivatives and the
+  // collision potential.
+  // Input: optimization_variables = Optimization variables in the current
+  // iteration.
+  // The variables (derivatives) are stacked as follows: [derivatives_dim_0
+  // ...  derivatives_dim_N]
+  // Input: gradient = Gradient of the objective function wrt. changes of
+  // parameters.
+  // We CAN compute the gradient analytically here.
+  // --> Thus, gradient-free and gradient-based optimization methods are
+  // possible.
+  // Input: data = Custom data pointer. In our case, it's an ConstraintData
+  // object.
+  // Output: Cost and gradients (only for gradient-based optimization) based
+  // on the parameters passed in.
   static double objectiveFunctionFreeConstraintsAndCollision(
           const std::vector<double>& x, std::vector<double>& gradient,
           void* data);
 
+  // Calculate the cost and gradients of the squared difference of the
+  // derivative to be optimized.
   static double getCostAndGradientDerivative(
           std::vector<Eigen::VectorXd>* gradients, void* data);
 
+  // Calculate the cost and gradients of the collision potential.
   static double getCostAndGradientCollision(
           std::vector<Eigen::VectorXd>* gradients, void* data);
 
+  // Calculate the cost and gradient of the collision potential at the
+  // current position. (See paper [3]
   static double getCostAndGradientPotentialESDF(
           const Eigen::VectorXd& position, Eigen::VectorXd* gradient,
           void* data);
 
+  // Calculate the cost of the collision potential at a given distance to the
+  // obstacle (ie. current distance to obstacle)
   double getCostPotential(double collision_distance);
 
   // Evaluates the maximum magnitude constraint at the current value of
@@ -308,7 +346,8 @@ class PolynomialOptimizationNonLinear {
   int optimizeFreeConstraints();
 
   // Does the actual optimization work for optimizing the Free Constraints
-  // and for Collision
+  // with an objective function including a derivative term and the collision
+  // potential.
   int optimizeFreeConstraintsAndCollision();
 
   // Evaluates the maximum magnitude constraints as soft constraints and
@@ -347,19 +386,27 @@ class PolynomialOptimizationNonLinear {
   // Number of polynomials, e.g 3 for a 3D path.
   size_t dimension_;
 
+  // The vertices of the trajectory
   Vertex::Vector vertices_;
 
+  // Derivative to optimize
   int derivative_to_optimize_;
 
   // L = A_inv * M
   Eigen::MatrixXd L_;
 
   // Matrix for mapping a vector of polynomial coefficients of a function to
-  // the polynomail coefficients of its derivative
+  // the polynomial coefficients of its derivative
+  // [0 1 0 0 0 ...]              f_k(t) = a0 + a1*t + a2*t^2 + a3*t^3 + ...
+  // [0 0 2 0 0 ...]          df_k(t)/dt =      a1   + 2*a2*t + 3*a3*t^2 + ...
+  // [0 0 0 3 0 ...]                    with T = [t^0 t^1 t^2 t^3 t^4 ...]
+  // [0 0 0 0 4 ...]            -->     f_k(t) = T * p_k
+  // [  ...   ...  ]            --> df_k(t)/dt = T * V * p_k
   Eigen::MatrixXd V_;
   Eigen::MatrixXd V_all_segments_;
 
-  std::shared_ptr<sdf_tools::SignedDistanceField> sdf_; // Signed Distance Field
+  // Signed Distance Field needed for optimizing the collision potential
+  std::shared_ptr<sdf_tools::SignedDistanceField> sdf_;
 };
 
 }  // namespace mav_trajectory_generation
