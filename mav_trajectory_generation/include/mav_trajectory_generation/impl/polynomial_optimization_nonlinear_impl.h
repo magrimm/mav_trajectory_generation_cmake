@@ -351,11 +351,14 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
   const size_t n_optmization_variables =
           free_constraints.size() * free_constraints.front().size();
 
+  std::vector<double> initial_step, initial_solution, lower_bounds,
+          upper_bounds;
   initial_solution.reserve(n_optmization_variables);
   initial_step.reserve(n_optmization_variables);
   lower_bounds.reserve(n_optmization_variables);
   upper_bounds.reserve(n_optmization_variables);
 
+  // TODO: no need to calculate twice. Calculate in comptueIntitialSol...
   // Calculate L
   Eigen::MatrixXd M, A_inv;
   poly_opt_.getM(&M);
