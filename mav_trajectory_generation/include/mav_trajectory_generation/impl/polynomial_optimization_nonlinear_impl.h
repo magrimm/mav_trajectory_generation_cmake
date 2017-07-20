@@ -49,7 +49,8 @@ PolynomialOptimizationNonLinear<_N>::PolynomialOptimizationNonLinear(
     : poly_opt_(dimension),
       dimension_(dimension),
       derivative_to_optimize_(derivative_order::INVALID),
-      optimization_parameters_(parameters) {}
+      optimization_parameters_(parameters),
+      solve_with_position_constraint_(false) {}
 
 template <int _N>
 bool PolynomialOptimizationNonLinear<_N>::setupFromVertices(
@@ -328,11 +329,15 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraints() {
 
 template <int _N>
 int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
-  std::vector<double> initial_step, initial_solution, lower_bounds,
-          upper_bounds;
-
   // compute initial solution
-  poly_opt_.solveLinear();
+  solve_with_position_constraint_ = true;
+  if (solve_with_position_constraint_) {
+    poly_opt_.solveLinear();
+  } else {
+    computeInitialSolutionWithoutPositionConstraints();
+    // TODO: test if trajectory_initial_ is the same here as in computeInitital
+  }
+
   std::vector<Eigen::VectorXd> free_constraints;
   poly_opt_.getFreeConstraints(&free_constraints);
   CHECK(free_constraints.size() > 0);
