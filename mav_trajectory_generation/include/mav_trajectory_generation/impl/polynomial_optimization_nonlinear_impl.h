@@ -118,6 +118,9 @@ bool PolynomialOptimizationNonLinear<_N
   trajectory_initial_.clear();
   getTrajectory(&trajectory_initial_);
 
+  // Parameters before removing constraints
+  const size_t n_free_constraints = poly_opt_.getNumberFreeConstraints();
+  const size_t n_fixed_constraints = poly_opt_.getNumberFixedConstraints();
   // 2) Get the coefficients from the segments
   mav_trajectory_generation::Segment::Vector segments;
   poly_opt_.getSegments(&segments);
@@ -159,6 +162,9 @@ bool PolynomialOptimizationNonLinear<_N
 //    }
 //  }
 
+  // Parameters after removing constraints // TODO: test if needed and true
+  const size_t n_free_constraints_after = poly_opt_.getNumberFreeConstraints();
+  const size_t n_fixed_constraints_after = poly_opt_.getNumberFixedConstraints();
   // TODO: move to linear solver. add method setFreeConstraintsFromCoefficients
   // 5) Get your new mapping matrix L (p = L*[d_f d_P]^T = A^(-1)*M*[d_f d_P]^T)
   // Fixed constraints are the same except plus the position constraints we
