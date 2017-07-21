@@ -115,8 +115,6 @@ bool PolynomialOptimizationNonLinear<_N
   // Get dimension
   const size_t dim = poly_opt_.getDimension();
 
-  trajectory_initial_.clear();
-  getTrajectory(&trajectory_initial_);
 
   // Parameters before removing constraints
   const size_t n_free_constraints = poly_opt_.getNumberFreeConstraints();
@@ -342,12 +340,13 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
   solve_with_position_constraint_ = true;
   if (solve_with_position_constraint_) {
     poly_opt_.solveLinear();
-    trajectory_initial_.clear();
-    getTrajectory(&trajectory_initial_);
   } else {
     computeInitialSolutionWithoutPositionConstraints();
-    // TODO: test if trajectory_initial_ is the same here as in computeInitital
   }
+
+  // Save the trajectory from the initial guess/solution
+  trajectory_initial_.clear();
+  getTrajectory(&trajectory_initial_);
 
   std::vector<Eigen::VectorXd> free_constraints;
   poly_opt_.getFreeConstraints(&free_constraints);
