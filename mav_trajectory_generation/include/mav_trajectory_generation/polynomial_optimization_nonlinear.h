@@ -55,7 +55,11 @@ struct NonlinearOptimizationParameters {
         soft_constraint_weight(100.0),
         print_debug_info(false),
         objective(kOptimizeFreeConstraintsAndTime),
-        weights() {}
+        weights(),
+        state_bound_multiplicator(2.0),
+        map_resolution(0.0),
+        min_bound(Eigen::Vector3d::Zero()),
+        max_bound(Eigen::Vector3d::Zero()){}
 
   // Stopping criteria, if objective function changes less than absolute value.
   // Disabled if negative.
@@ -135,6 +139,19 @@ struct NonlinearOptimizationParameters {
     double w_t;  // Weight for time cost
     double w_sc; // Weight for soft constraint cost
   } weights;
+
+  // Multiplication factor for optimization parameters of the initial guess.
+  // Used for lower and upper bound. Optimization parameter boundaries
+  // regarding positions of the vertices are set directly from the map
+  // boundaries.
+  double state_bound_multiplicator;
+
+  // Map resolution of the environment
+  double map_resolution;
+
+  // Upper and Lower boundaries of the map/environment
+  Eigen::Vector3d min_bound;
+  Eigen::Vector3d max_bound;
 };
 
 class OptimizationInfo {
