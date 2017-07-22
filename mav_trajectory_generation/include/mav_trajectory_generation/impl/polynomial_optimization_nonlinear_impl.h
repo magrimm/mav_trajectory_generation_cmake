@@ -405,6 +405,16 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
     upper_bounds.push_back(abs_x * 2);
   }
 
+  std::cout << "NLOPT X BOUNDS: LOWER | UPPER || INITIAL SOL || INITIAL STEP"
+            << std::endl;
+  for (int j = 0; j < lower_bounds.size(); ++j) {
+    std::cout << j << ": " << lower_bounds[j] << " | "
+              << upper_bounds[j] << " || "
+              << initial_solution[j] << " || "
+              << initial_step[j] << std::endl;
+  }
+  std::cout << std::endl;
+
   try {
     nlopt_->set_initial_step(initial_step);
     nlopt_->set_lower_bounds(lower_bounds);
