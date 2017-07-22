@@ -396,13 +396,43 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
     }
   }
 
+  double multiplier = optimization_parameters_.state_bound_multiplicator;
+  if (multiplier == 0.0) {
+    LOG(INFO) << "USE HARD CONSTRAINTS";
+
+    lower_bounds = std::vector<double>(n_optmization_variables, -HUGE_VAL);
+    upper_bounds = std::vector<double>(n_optmization_variables, HUGE_VAL);
+
+    // Add hard constraints with lower and upper bounds for opti parameters
+    for (int k = 0; k < dimension_; ++k) {
+      for (int n = 0; n < n_segments-1; ++n) {
+        const unsigned int start_idx = k*free_constraints.front().size() +
+                n*(derivative_to_optimize_+1);
+        lower_bounds[start_idx] = optimization_parameters_.min_bound[k];
+        upper_bounds[start_idx] = optimization_parameters_.max_bound[k];
+
+        for (const auto& constraint_data : inequality_constraints_) {
+          const unsigned int deriv_idx = constraint_data->derivative;
+          lower_bounds[start_idx + deriv_idx] = -std::abs(constraint_data->value);
+          upper_bounds[start_idx + deriv_idx] = std::abs(constraint_data->value);
+        }
+      }
+    }
+  } else {
+    LOG(INFO) << "USE MULTIPLIER";
+
+    for (double x : initial_solution) {
+      const double abs_x = std::abs(x);
+      lower_bounds.push_back(-abs_x * multiplier);
+      upper_bounds.push_back(abs_x * multiplier);
+    }
+  }
+
   initial_step.reserve(n_optmization_variables);
   for (double x : initial_solution) {
     const double abs_x = std::abs(x);
     initial_step.push_back(optimization_parameters_.initial_stepsize_rel *
                            abs_x);
-    lower_bounds.push_back(-abs_x * 2);
-    upper_bounds.push_back(abs_x * 2);
   }
 
   std::cout << "NLOPT X BOUNDS: LOWER | UPPER || INITIAL SOL || INITIAL STEP"
