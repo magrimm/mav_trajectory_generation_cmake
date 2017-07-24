@@ -137,6 +137,8 @@ bool PolynomialOptimizationNonLinear<_N
             mav_trajectory_generation::derivative_order::POSITION);
   }
 
+  std::cout << "vertices_: " << vertices_ << std::endl;
+
   // 4) Setup poly_opt_ again with new set of constraints
   std::vector<double> segment_times;
   poly_opt_.getSegmentTimes(&segment_times);
