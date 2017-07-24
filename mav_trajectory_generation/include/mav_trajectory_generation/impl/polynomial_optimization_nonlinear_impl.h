@@ -1206,6 +1206,14 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
   if (gradient != NULL) {
     std::vector<double> grad_c_esdf = data->sdf_->GetGradient3d(position, true);
 
+    // TODO: GET RID --> only debug (adjust opti param boundaries lower_ upper_)
+    // TODO: BUGGGGGGG
+    if (grad_c_esdf.empty()) {
+      LOG(INFO) << "GRAD EMPTY --> SET ZERO";
+      std::cout << "GRAD EMPTY --> SET ZERO" << std::endl;
+      grad_c_esdf = std::vector<double>(3, 0.0);
+    }
+
     // -grad, since sdf has different grad direction convention
     (*gradient)[0] = -grad_c_esdf[0];
     (*gradient)[1] = -grad_c_esdf[1];
