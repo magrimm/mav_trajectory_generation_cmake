@@ -1068,19 +1068,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
   for (int k = 0; k < dim; ++k) {
     Eigen::VectorXd d_all_segments(n_fixed_constraints + n_free_constraints);
     d_all_segments.head(n_fixed_constraints) = d_f_vec[k];
-
-    switch (data->optimization_parameters_.objective) {
-      case NonlinearOptimizationParameters::OptimizationObjective::kOptimizeFreeConstraintsAndCollision:
-        d_all_segments.tail(n_free_constraints) = d_p_vec[k];
-        break;
-      case NonlinearOptimizationParameters::OptimizationObjective::kOptimizeFreeConstraintsAndCollisionAndTime:
-        d_all_segments.tail(n_free_constraints) =
-                d_p_vec[k].tail(n_free_constraints);
-        break;
-      default:
-        LOG(ERROR) << "Unknown Optimization Objective. Abort.";
-        break;
-    }
+    d_all_segments.tail(n_free_constraints) = d_p_vec[k];
 
     // The coefficients for each axis k with size (N * num_segments) x 1
     p_all_segments[k] = data->L_ * d_all_segments;
