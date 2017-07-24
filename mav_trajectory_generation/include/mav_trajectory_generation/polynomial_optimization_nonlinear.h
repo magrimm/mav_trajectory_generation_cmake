@@ -128,6 +128,7 @@ struct NonlinearOptimizationParameters {
     kOptimizeFreeConstraintsAndTime,
     kOptimizeTime,
     kOptimizeFreeConstraintsAndCollision,
+    kOptimizeFreeConstraintsAndCollisionAndTime,
     kUnknown
   } objective;
 
@@ -399,6 +400,11 @@ class PolynomialOptimizationNonLinear {
   // with an objective function including a derivative term and the collision
   // potential.
   int optimizeFreeConstraintsAndCollision();
+
+  // Does the actual optimization work for optimizing the Free Constraints
+  // and the Segment Timeswith an objective function including a derivative
+  // term,  collision potential and time term.
+  int optimizeFreeConstraintsAndCollisionAndTime();
 
   // Evaluates the maximum magnitude constraints as soft constraints and
   // returns a cost, depending on the violation of the constraints.

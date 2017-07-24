@@ -80,6 +80,11 @@ bool PolynomialOptimizationNonLinear<_N>::setupFromVertices(
       n_optimization_parameters =
               poly_opt_.getNumberFreeConstraints() * poly_opt_.getDimension();
       break;
+    case NonlinearOptimizationParameters::OptimizationObjective::kOptimizeFreeConstraintsAndCollisionAndTime:
+      n_optimization_parameters =
+              segment_times.size() +
+              poly_opt_.getNumberFreeConstraints() * poly_opt_.getDimension();
+      break;
     default:
       LOG(ERROR) << "Unknown Optimization Objective. Abort.";
       break;
@@ -212,6 +217,9 @@ int PolynomialOptimizationNonLinear<_N>::optimize() {
       break;
     case NonlinearOptimizationParameters::OptimizationObjective::kOptimizeFreeConstraintsAndCollision:
       result = optimizeFreeConstraintsAndCollision();
+      break;
+    case NonlinearOptimizationParameters::OptimizationObjective::kOptimizeFreeConstraintsAndCollisionAndTime:
+      result = optimizeFreeConstraintsAndCollisionAndTime();
       break;
     default:
       LOG(ERROR) << "Unknown Optimization Objective. Abort.";
@@ -539,6 +547,172 @@ int PolynomialOptimizationNonLinear<_N>::optimizeTimeAndFreeConstraints() {
     nlopt_->set_min_objective(&PolynomialOptimizationNonLinear<
                                   N>::objectiveFunctionTimeAndConstraints,
                               this);
+  } catch (std::exception& e) {
+    LOG(ERROR) << "error while setting up nlopt: " << e.what() << std::endl;
+    return nlopt::FAILURE;
+  }
+
+  double final_cost = std::numeric_limits<double>::max();
+  int result;
+
+  try {
+    timing::Timer timer_solve("optimize_nonlinear_full_total_time");
+    result = nlopt_->optimize(initial_solution, final_cost);
+    timer_solve.Stop();
+  } catch (std::exception& e) {
+    LOG(ERROR) << "error while running nlopt: " << e.what() << std::endl;
+    return nlopt::FAILURE;
+  }
+
+  return result;
+}
+
+template <int _N>
+int PolynomialOptimizationNonLinear<_N
+>::optimizeFreeConstraintsAndCollisionAndTime() {
+  std::vector<double> initial_step, initial_solution, segment_times,
+          lower_bounds, upper_bounds;
+
+  // compute initial solution
+  solve_with_position_constraint_ = false;
+  if (solve_with_position_constraint_) {
+    poly_opt_.solveLinear();
+  } else {
+    computeInitialSolutionWithoutPositionConstraints();
+  }
+
+  // Save the trajectory from the initial guess/solution
+  trajectory_initial_.clear();
+  getTrajectory(&trajectory_initial_);
+
+  // Get segment times
+  poly_opt_.getSegmentTimes(&segment_times);
+  const size_t n_segments = segment_times.size();
+
+  // Get and check free constraints and get number of optimization variables
+  std::vector<Eigen::VectorXd> free_constraints;
+  poly_opt_.getFreeConstraints(&free_constraints);
+  CHECK(free_constraints.size() > 0);
+  CHECK(free_constraints.front().size() > 0);
+
+  const size_t n_optmization_variables =
+          n_segments + free_constraints.size() * free_constraints.front().size();
+
+  initial_solution.reserve(n_optmization_variables);
+  initial_step.reserve(n_optmization_variables);
+  lower_bounds.reserve(n_optmization_variables);
+  upper_bounds.reserve(n_optmization_variables);
+
+  // TODO: no need to calculate twice. Calculate in comptueIntitialSol...
+  // Calculate L
+  Eigen::MatrixXd M, A_inv;
+  poly_opt_.getM(&M);
+  poly_opt_.getAInverse(&A_inv);
+
+  L_ = Eigen::MatrixXd(A_inv * M);
+
+  // Calculate matrix for mapping vector of polynomial coefficients of a
+  // function to the polynomial coefficients of its derivative.
+  // [0 1 0 0 0 ...]              f_k(t) = a0 + a1*t + a2*t^2 + a3*t^3 + ...
+  // [0 0 2 0 0 ...]          df_k(t)/dt =      a1   + 2*a2*t + 3*a3*t^2 + ...
+  // [0 0 0 3 0 ...]                    with T = [t^0 t^1 t^2 t^3 t^4 ...]
+  // [0 0 0 0 4 ...]            -->     f_k(t) = T * p_k
+  // [  ...   ...  ]            --> df_k(t)/dt = T * V * p_k
+//  size_t n_segments = poly_opt_.getNumberSegments();
+
+  V_all_segments_.resize(n_segments * N, n_segments * N);
+  V_.resize(N, N);
+
+  V_all_segments_.setZero();
+  V_.setZero();
+  for (int i = 0; i < V_all_segments_.diagonal(1).size(); ++i) {
+    V_all_segments_.diagonal(1)(i) = (i + 1) % N;
+  }
+  V_ = V_all_segments_.block(0, 0, N, N);
+
+  // copy all constraints into one vector:
+  for (double t : segment_times) {
+    initial_solution.push_back(t);
+  }
+
+  for (const Eigen::VectorXd& c : free_constraints) {
+    for (int i = 0; i < c.size(); ++i) {
+      initial_solution.push_back(c[i]);
+    }
+  }
+
+  double multiplier = optimization_parameters_.state_bound_multiplicator;
+  if (optimization_parameters_.set_bounds_with_constraints) {
+    LOG(INFO) << "USE HARD CONSTRAINTS FOR ENDPOINT DERIVATIVE BOUNDARIES";
+
+//    lower_bounds = std::vector<double>(n_optmization_variables, -HUGE_VAL);
+//    upper_bounds = std::vector<double>(n_optmization_variables, HUGE_VAL);
+
+    for (double x : initial_solution) {
+      const double abs_x = std::abs(x);
+      lower_bounds.push_back(-abs_x * multiplier);
+      upper_bounds.push_back(abs_x * multiplier);
+    }
+
+    // Add hard constraints with lower and upper bounds for opti parameters
+    for (int k = 0; k < dimension_; ++k) {
+      for (int n = 0; n < n_segments - 1; ++n) {
+        // Add position constraints given through the map boundaries
+        const unsigned int start_idx =
+                n_segments + k * free_constraints.front().size() +
+                        n * (derivative_to_optimize_ + 1);
+        lower_bounds[start_idx] = optimization_parameters_.min_bound[k];
+        upper_bounds[start_idx] = optimization_parameters_.max_bound[k];
+
+        // Add higher order derivative constraints (v_max and a_max)
+        for (const auto& constraint_data : inequality_constraints_) {
+          const unsigned int deriv_idx = constraint_data->derivative;
+          lower_bounds[start_idx + deriv_idx] = -std::abs(
+                  constraint_data->value);
+          upper_bounds[start_idx + deriv_idx] = std::abs(
+                  constraint_data->value);
+        }
+      }
+    }
+  } else {
+    LOG(INFO) << "USE MULTIPLIER FOR ALL BOUNDS";
+
+    for (double x : initial_solution) {
+      const double abs_x = std::abs(x);
+      lower_bounds.push_back(-abs_x * multiplier);
+      upper_bounds.push_back(abs_x * multiplier);
+    }
+  }
+
+  for (size_t i = 0; i < n_segments; ++i) {
+    lower_bounds[i] = 0.1; // TODO: needed? if yes parameterize
+  }
+
+  initial_step.reserve(n_optmization_variables);
+  for (double x : initial_solution) {
+    const double abs_x = std::abs(x);
+    initial_step.push_back(optimization_parameters_.initial_stepsize_rel *
+                           abs_x);
+  }
+
+  std::cout << "NLOPT X BOUNDS: LOWER | UPPER || INITIAL SOL || INITIAL STEP"
+            << std::endl;
+  for (int j = 0; j < lower_bounds.size(); ++j) {
+    std::cout << j << ": " << lower_bounds[j] << " | "
+              << upper_bounds[j] << " || "
+              << initial_solution[j] << " || "
+              << initial_step[j] << std::endl;
+  }
+  std::cout << std::endl;
+
+  try {
+    nlopt_->set_initial_step(initial_step);
+    nlopt_->set_lower_bounds(lower_bounds);
+    nlopt_->set_upper_bounds(upper_bounds);
+    nlopt_->set_min_objective(
+            &PolynomialOptimizationNonLinear<
+                    N>::objectiveFunctionFreeConstraintsAndCollisionAndTime,
+            this);
   } catch (std::exception& e) {
     LOG(ERROR) << "error while setting up nlopt: " << e.what() << std::endl;
     return nlopt::FAILURE;
