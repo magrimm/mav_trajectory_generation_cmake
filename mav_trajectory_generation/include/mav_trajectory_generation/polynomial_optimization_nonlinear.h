@@ -154,7 +154,7 @@ struct NonlinearOptimizationParameters {
   Eigen::Vector3d min_bound;
   Eigen::Vector3d max_bound;
 
-  // Use numerica gradients
+  // Use numerical gradients
   bool use_numeric_grad;
 };
 
