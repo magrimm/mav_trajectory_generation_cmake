@@ -180,7 +180,6 @@ bool PolynomialOptimizationNonLinear<_N
   std::vector<Eigen::VectorXd> d_p(dim, Eigen::VectorXd(n_free_constraints_after));
   for (int i = 0; i < dim; ++i) {
     d_all = M_pinv * A * p[i]; // Old coeff p, but new ordering M_pinv * A
-    // TODO:  pick out necessary derivatives (test)
     d_p[i] = d_all.tail(n_free_constraints_after);
   }
 
@@ -348,6 +347,7 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
   trajectory_initial_.clear();
   getTrajectory(&trajectory_initial_);
 
+  // Get and check free constraints and get number of optimization variables
   std::vector<Eigen::VectorXd> free_constraints;
   poly_opt_.getFreeConstraints(&free_constraints);
   CHECK(free_constraints.size() > 0);
@@ -405,16 +405,18 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
 
     // Add hard constraints with lower and upper bounds for opti parameters
     for (int k = 0; k < dimension_; ++k) {
-      for (int n = 0; n < n_segments-1; ++n) {
-        const unsigned int start_idx = k*free_constraints.front().size() +
-                n*(derivative_to_optimize_+1);
+      for (int n = 0; n < n_segments - 1; ++n) {
+        const unsigned int start_idx = k * free_constraints.front().size() +
+                                       n * (derivative_to_optimize_ + 1);
         lower_bounds[start_idx] = optimization_parameters_.min_bound[k];
         upper_bounds[start_idx] = optimization_parameters_.max_bound[k];
 
         for (const auto& constraint_data : inequality_constraints_) {
           const unsigned int deriv_idx = constraint_data->derivative;
-          lower_bounds[start_idx + deriv_idx] = -std::abs(constraint_data->value);
-          upper_bounds[start_idx + deriv_idx] = std::abs(constraint_data->value);
+          lower_bounds[start_idx + deriv_idx] = -std::abs(
+                  constraint_data->value);
+          upper_bounds[start_idx + deriv_idx] = std::abs(
+                  constraint_data->value);
         }
       }
     }
@@ -1040,6 +1042,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
         Eigen::Block<Eigen::VectorXd> p_k =
                 p_all_segments[k].block(i * N, 0, N, 1);
 
+        // TODO: pos bound checking
         pos(k) = (T.transpose() * p_k)(0);
         vel(k) = (T.transpose() * data->V_ * p_k)(0);
       }
