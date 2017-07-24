@@ -397,20 +397,28 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
   }
 
   double multiplier = optimization_parameters_.state_bound_multiplicator;
-  if (multiplier == 0.0) {
-    LOG(INFO) << "USE HARD CONSTRAINTS";
+  if (optimization_parameters_.set_bounds_with_constraints) {
+    LOG(INFO) << "USE HARD CONSTRAINTS FOR ENDPOINT DERIVATIVE BOUNDARIES";
 
-    lower_bounds = std::vector<double>(n_optmization_variables, -HUGE_VAL);
-    upper_bounds = std::vector<double>(n_optmization_variables, HUGE_VAL);
+//    lower_bounds = std::vector<double>(n_optmization_variables, -HUGE_VAL);
+//    upper_bounds = std::vector<double>(n_optmization_variables, HUGE_VAL);
+
+    for (double x : initial_solution) {
+      const double abs_x = std::abs(x);
+      lower_bounds.push_back(-abs_x * multiplier);
+      upper_bounds.push_back(abs_x * multiplier);
+    }
 
     // Add hard constraints with lower and upper bounds for opti parameters
     for (int k = 0; k < dimension_; ++k) {
       for (int n = 0; n < n_segments - 1; ++n) {
+        // Add position constraints given through the map boundaries
         const unsigned int start_idx = k * free_constraints.front().size() +
                                        n * (derivative_to_optimize_ + 1);
         lower_bounds[start_idx] = optimization_parameters_.min_bound[k];
         upper_bounds[start_idx] = optimization_parameters_.max_bound[k];
 
+        // Add higher order derivative constraints (v_max and a_max)
         for (const auto& constraint_data : inequality_constraints_) {
           const unsigned int deriv_idx = constraint_data->derivative;
           lower_bounds[start_idx + deriv_idx] = -std::abs(
@@ -421,7 +429,7 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
       }
     }
   } else {
-    LOG(INFO) << "USE MULTIPLIER";
+    LOG(INFO) << "USE MULTIPLIER FOR ALL BOUNDS";
 
     for (double x : initial_solution) {
       const double abs_x = std::abs(x);
