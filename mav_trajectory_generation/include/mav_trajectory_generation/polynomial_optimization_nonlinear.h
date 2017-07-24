@@ -316,7 +316,7 @@ class PolynomialOptimizationNonLinear {
   // Input: gradient = Gradient of the objective function wrt. changes of
   // parameters.
   // We CANNOT compute the gradient analytically here.
-  // --> Thus, only gradient free optimization methods are possible.
+  // --> Thus, only gradient-free optimization methods are possible.
   // Input: data = Custom data pointer. In our case, it's an ConstraintData
   // object.
   // Output: Cost based on the parameters passed in.
@@ -358,6 +358,24 @@ class PolynomialOptimizationNonLinear {
   // Output: Cost and gradients (only for gradient-based optimization) based
   // on the parameters passed in.
   static double objectiveFunctionFreeConstraintsAndCollision(
+          const std::vector<double>& x, std::vector<double>& gradient,
+          void* data);
+
+  // Objective function for optimizing the free endpoint-derivatives, the
+  // segment times and the collision potential.
+  // Input: optimization_variables = Optimization variables in the current
+  // iteration.
+  // The variables (time, derivatives) are stacked as follows:
+  // [segment_times  derivatives_dim_0 ... derivatives_dim_N]
+  // Input: gradient = Gradient of the objective function wrt. changes of
+  // parameters.
+  // We CANNOT compute the gradient analytically here.
+  // --> Thus, only gradient free optimization methods are possible.
+  // Input: data = Custom data pointer. In our case, it's an ConstraintData
+  // object.
+  // Output: Cost and gradients (only for gradient-based optimization) based
+  // on the parameters passed in.
+  static double objectiveFunctionFreeConstraintsAndCollisionAndTime(
           const std::vector<double>& x, std::vector<double>& gradient,
           void* data);
 
