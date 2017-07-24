@@ -59,7 +59,8 @@ struct NonlinearOptimizationParameters {
         state_bound_multiplicator(2.0),
         map_resolution(0.0),
         min_bound(Eigen::Vector3d::Zero()),
-        max_bound(Eigen::Vector3d::Zero()){}
+        max_bound(Eigen::Vector3d::Zero()),
+        use_numeric_grad(false) {}
 
   // Stopping criteria, if objective function changes less than absolute value.
   // Disabled if negative.
@@ -152,6 +153,9 @@ struct NonlinearOptimizationParameters {
   // Upper and Lower boundaries of the map/environment
   Eigen::Vector3d min_bound;
   Eigen::Vector3d max_bound;
+
+  // Use numerica gradients
+  bool use_numeric_grad;
 };
 
 class OptimizationInfo {
