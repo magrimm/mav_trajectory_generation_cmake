@@ -929,6 +929,11 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
             cost_constraints << std::endl;
   }
 
+  // Save the trajectory of this iteration
+  Trajectory trajectory_i;
+  optimization_data->getTrajectory(&trajectory_i);
+  optimization_data->all_trajectories_.push_back(trajectory_i);
+
   optimization_data->optimization_info_.n_iterations++;
   optimization_data->optimization_info_.cost_trajectory = cost_trajectory;
   optimization_data->optimization_info_.cost_collision = cost_collision;

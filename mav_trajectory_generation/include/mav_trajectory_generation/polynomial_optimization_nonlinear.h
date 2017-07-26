@@ -250,6 +250,20 @@ class PolynomialOptimizationNonLinear {
     trajectory->setSegments(segments);
   }
 
+  // Get all trajectories from each nlopt iteration
+  void getAllTrajectories(std::vector<Trajectory>* trajectories) const {
+    CHECK_NOTNULL(trajectories);
+    trajectories->reserve(all_trajectories_.size());
+
+    for (int i = 0; i < all_trajectories_.size(); ++i) {
+      Trajectory traj_i;
+      Segment::Vector segments;
+      all_trajectories_[i].getSegments(&segments);
+      traj_i.setSegments(segments);
+      trajectories->push_back(traj_i);
+    }
+  }
+
   // Returns a const reference to the underlying linear optimization
   // object.
   const PolynomialOptimization<N>& getPolynomialOptimizationRef() const {
@@ -464,6 +478,7 @@ class PolynomialOptimizationNonLinear {
 
   // Linear solution / Initial guess
   Trajectory trajectory_initial_;
+  std::vector<Trajectory> all_trajectories_;
 };
 
 }  // namespace mav_trajectory_generation
