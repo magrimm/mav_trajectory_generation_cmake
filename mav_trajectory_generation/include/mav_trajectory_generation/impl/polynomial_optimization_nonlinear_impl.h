@@ -1211,6 +1211,22 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
   if (gradient != NULL) {
     std::vector<double> grad_c_esdf = data->sdf_->GetGradient3d(position, true);
 
+    // Numerical gradients
+    std::vector<double> grad_c_potential(data->dimension_);
+    double increment_dist = 0.05; // map resolution
+    Eigen::VectorXd increment(data->dimension_);
+    for (int k = 0; k < data->dimension_; ++k) {
+      increment.setZero();
+      increment[k] = increment_dist;
+
+      // Get distance and potential cost from collision at current position
+      double left_dist = data->sdf_->Get3d(position-increment);
+      double left_cost = data->getCostPotential(left_dist);
+      double right_dist = data->sdf_->Get3d(position+increment);
+      double right_cost = data->getCostPotential(right_dist);
+
+      grad_c_potential[k] += (right_cost - left_cost) / (2.0 * increment_dist);
+    }
     // TODO: GET RID --> only debug (adjust opti param boundaries lower_ upper_)
     // TODO: BUGGGGGGG
     if (grad_c_esdf.empty()) {
