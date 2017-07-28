@@ -479,6 +479,9 @@ class PolynomialOptimizationNonLinear {
   // Linear solution / Initial guess
   Trajectory trajectory_initial_;
   std::vector<Trajectory> all_trajectories_;
+
+  std::vector<double> lower_bounds_;
+  std::vector<double> upper_bounds_;
 };
 
 }  // namespace mav_trajectory_generation

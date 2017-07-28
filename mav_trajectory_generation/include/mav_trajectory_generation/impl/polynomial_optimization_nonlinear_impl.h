@@ -440,6 +440,10 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
     }
   }
 
+  // TODO: REMOVE only debug
+  lower_bounds_ = lower_bounds;
+  upper_bounds_ = upper_bounds;
+
   initial_step.reserve(n_optmization_variables);
   for (double x : initial_solution) {
     const double abs_x = std::abs(x);
@@ -828,6 +832,20 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
 
   optimization_data->poly_opt_.setFreeConstraints(free_constraints);
 
+
+  std::cout << "LOWER BOUNDS -- FREE CONSTRAINTS -- UPPER BOUNDS" << std::endl;
+  for (size_t d = 0; d < dim; ++d) {
+    for (int i = 0; i < free_constraints[0].size(); ++i) {
+      const size_t idx_start = d * n_free_constraints;
+      std::cout << d << " " << i << ": "
+                << optimization_data->lower_bounds_[idx_start+i] << " | "
+                << free_constraints[d][i] << " | "
+                << optimization_data->upper_bounds_[idx_start+i] << std::endl;
+    }
+    std::cout << std::endl;
+  }
+  std::cout << std::endl;
+
   std::vector<Eigen::VectorXd> grad_d, grad_c;
   double J_d = 0.0;
   double J_c = 0.0;
@@ -1141,7 +1159,6 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
 
       // Cost and gradient of potential map from esdf
       Eigen::VectorXd grad_c_d_f(dim); // dc/dd_f
-
       double c = 0.0;
       if (gradients != NULL) {
         c = getCostAndGradientPotentialESDF(pos, &grad_c_d_f, data);
@@ -1151,7 +1168,6 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
 
       // Cost per segment and time sample
       double J_c_i_t = c * vel.norm() * time_sum;
-
       J_c += J_c_i_t;
 
       if (gradients != NULL) {
