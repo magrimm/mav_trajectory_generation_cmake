@@ -112,6 +112,10 @@ bool PolynomialOptimizationNonLinear<_N
   // compute initial solution
   poly_opt_.solveLinear();
 
+  // Save the trajectory from the initial guess/solution
+  trajectory_initial_.clear();
+  getTrajectory(&trajectory_initial_);
+
   // Get dimension
   const size_t dim = poly_opt_.getDimension();
 
@@ -346,8 +350,8 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
   }
 
   // Save the trajectory from the initial guess/solution
-  trajectory_initial_.clear();
-  getTrajectory(&trajectory_initial_);
+  trajectory_initial_after_removing_pos_.clear();
+  getTrajectory(&trajectory_initial_after_removing_pos_);
 
   // Get and check free constraints and get number of optimization variables
   std::vector<Eigen::VectorXd> free_constraints;

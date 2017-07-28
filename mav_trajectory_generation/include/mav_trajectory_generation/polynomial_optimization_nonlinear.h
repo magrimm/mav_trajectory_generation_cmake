@@ -250,6 +250,14 @@ class PolynomialOptimizationNonLinear {
     trajectory->setSegments(segments);
   }
 
+  // Get the trajectory of the initial solution given to the nonlinear solver
+  void getInitialTrajectoryAfterRemovingPos(Trajectory* trajectory) const {
+    CHECK_NOTNULL(trajectory);
+    Segment::Vector segments;
+    trajectory_initial_after_removing_pos_.getSegments(&segments);
+    trajectory->setSegments(segments);
+  }
+
   // Get all trajectories from each nlopt iteration
   void getAllTrajectories(std::vector<Trajectory>* trajectories) const {
     CHECK_NOTNULL(trajectories);
@@ -478,6 +486,7 @@ class PolynomialOptimizationNonLinear {
 
   // Linear solution / Initial guess
   Trajectory trajectory_initial_;
+  Trajectory trajectory_initial_after_removing_pos_;
   std::vector<Trajectory> all_trajectories_;
 
   std::vector<double> lower_bounds_;
