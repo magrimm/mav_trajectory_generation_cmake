@@ -149,9 +149,9 @@ bool PolynomialOptimizationNonLinear<_N
   setupFromVertices(vertices_, segment_times, derivative_to_optimize_);
 
   // TODO: needed? find runtime error
-  // Add inequality constraints again after reset nlopt_
-//  for (const auto& constraint_data : inequality_constraints_) {
-//    if (!optimization_parameters_.use_soft_constraints) {
+//  // Add inequality constraints again after reset nlopt_ --> Hard constraint
+//  if (!optimization_parameters_.use_soft_constraints) {
+//    for (const auto& constraint_data : inequality_constraints_) {
 //      try {
 //        nlopt_->add_inequality_constraint(
 //                &PolynomialOptimizationNonLinear<
