@@ -397,6 +397,10 @@ class PolynomialOptimizationNonLinear {
           const Eigen::VectorXd& position, Eigen::VectorXd* gradient,
           void* opt_data);
 
+  // Calculate the numerical gradients of the collision potential.
+  static void getNumericalGradientsCollision(
+          std::vector<Eigen::VectorXd>* gradients, void* opt_data);
+
   // Calculate the cost of the collision potential at a given distance to the
   // obstacle (ie. current distance to obstacle)
   double getCostPotential(double collision_distance);
