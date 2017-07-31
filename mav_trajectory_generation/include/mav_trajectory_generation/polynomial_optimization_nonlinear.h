@@ -392,10 +392,10 @@ class PolynomialOptimizationNonLinear {
           std::vector<Eigen::VectorXd>* gradients, void* data);
 
   // Calculate the cost and gradient of the collision potential at the
-  // current position. (See paper [3]
+  // current position. (See paper [3])
   static double getCostAndGradientPotentialESDF(
           const Eigen::VectorXd& position, Eigen::VectorXd* gradient,
-          void* data);
+          void* opt_data);
 
   // Calculate the cost of the collision potential at a given distance to the
   // obstacle (ie. current distance to obstacle)

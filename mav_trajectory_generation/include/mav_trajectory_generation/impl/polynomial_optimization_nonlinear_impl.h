@@ -482,7 +482,7 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
   int result;
 
   try {
-    timing::Timer timer_solve("optimize_nonlinear_full_total_time");
+    timing::Timer timer_solve("optimize_nlin_free_constraints_and_collision");
     result = nlopt_->optimize(initial_solution, final_cost);
     timer_solve.Stop();
   } catch (std::exception& e) {
@@ -973,12 +973,10 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
     }
 
     for (int i = 0; i < n_free_constraints; ++i) {
-      gradient[0 * n_free_constraints + i] =
-              w_d * grad_d[0][i] + w_c * grad_c[0][i];
-      gradient[1 * n_free_constraints + i] =
-              w_d * grad_d[1][i] + w_c * grad_c[1][i];
-      gradient[2 * n_free_constraints + i] =
-              w_d * grad_d[2][i] + w_c * grad_c[2][i];
+      for (int k = 0; k < dim; ++k) {
+        gradient[k * n_free_constraints + i] =
+                w_d * grad_d[k][i] + w_c * grad_c[k][i];
+      }
     }
   }
 
