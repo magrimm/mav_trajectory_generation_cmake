@@ -401,6 +401,10 @@ class PolynomialOptimizationNonLinear {
   static void getNumericalGradientsCollision(
           std::vector<Eigen::VectorXd>* gradients, void* opt_data);
 
+  // Calculate the numerical gradients of the cost of the soft constraints.
+  static double getCostAndGradientSoftConstraints(
+          std::vector<Eigen::VectorXd>* gradients, void* opt_data);
+
   // Calculate the cost of the collision potential at a given distance to the
   // obstacle (ie. current distance to obstacle)
   double getCostPotential(double collision_distance);
