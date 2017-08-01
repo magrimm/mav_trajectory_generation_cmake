@@ -1129,8 +1129,6 @@ template <int _N>
 double PolynomialOptimizationNonLinear<_N
 >::objectiveFunctionFreeConstraintsAndCollisionAndTime(
         const std::vector<double>& x, std::vector<double>& gradient, void* data) {
-  CHECK(gradient.empty())
-  << "computing gradient not possible, choose a gradient free method";
   CHECK_NOTNULL(data);
 
   PolynomialOptimizationNonLinear<N>* optimization_data =
@@ -1173,33 +1171,61 @@ double PolynomialOptimizationNonLinear<_N
 //  std::cout << std::endl;
 
   // TODO: calculate grad_t
-  std::vector<Eigen::VectorXd> grad_d, grad_c, grad_t;
+  std::vector<Eigen::VectorXd> grad_d, grad_c, grad_t, grad_sc;
   double J_d = 0.0;
   double J_c = 0.0;
   double J_t = 0.0;
+  double J_sc = 0.0;
   if (!gradient.empty()) {
     J_d = optimization_data->getCostAndGradientDerivative(
             &grad_d, optimization_data);
     J_c = optimization_data->getCostAndGradientCollision(
             &grad_c, optimization_data);
+    if (optimization_data->optimization_parameters_.use_soft_constraints) {
+      J_sc = optimization_data->getCostAndGradientSoftConstraints(
+              &grad_sc, optimization_data);
+    } else { // If not used, resize and set everything to zero
+      grad_sc.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+    }
   } else {
     J_d = optimization_data->getCostAndGradientDerivative(
             NULL, optimization_data);
     J_c = optimization_data->getCostAndGradientCollision(
             NULL, optimization_data);
+    if (optimization_data->optimization_parameters_.use_soft_constraints) {
+      J_sc = optimization_data->getCostAndGradientSoftConstraints(
+              NULL, optimization_data);
+    }
   }
   const double total_time = computeTotalTrajectoryTime(segment_times);
   J_t = total_time * total_time *
           optimization_data->optimization_parameters_.time_penalty;
 
-  // TODO: add numerical calculation option here
+  // Numerical gradients for collision cost
+  if (!gradient.empty()) {
+    if (optimization_data->optimization_parameters_.use_numeric_grad) {
+      std::vector<Eigen::VectorXd> grad_c_numeric(dim, Eigen::VectorXd::Zero
+              (n_free_constraints));
 
-  // TODO: Include soft constraint cost here?
-  double J_sc = 0.0;
-  if (optimization_data->optimization_parameters_.use_soft_constraints) {
-    J_sc = optimization_data->evaluateMaximumMagnitudeAsSoftConstraint(
-            optimization_data->inequality_constraints_,
-            optimization_data->optimization_parameters_.soft_constraint_weight);
+      optimization_data->getNumericalGradientsCollision(&grad_c_numeric,
+                                                        optimization_data);
+
+      std::cout << "grad_c | grad_c_numeric | diff | grad_sc: " << std::endl;
+      for (int k = 0; k < dim; ++k) {
+        for (int n = 0; n < n_free_constraints; ++n) {
+          std::cout << k << " " << n << ": " << grad_c[k][n] << " | "
+                    << grad_c_numeric[k][n] << " | "
+                    << grad_c[k][n] - grad_c_numeric[k][n] << " | "
+                    << grad_sc[k][n] << std::endl;
+        }
+        std::cout << std::endl;
+      }
+      std::cout << std::endl;
+
+      for (int k = 0; k < dim; ++k) {
+        grad_c[k] = grad_c_numeric[k];
+      }
+    }
   }
 
   // Weighting terms for different costs
@@ -1252,7 +1278,6 @@ double PolynomialOptimizationNonLinear<_N
     }
   }
 
-  // TODO: Clean not needed terms (ie cost_time) everywhere
   return cost_trajectory + cost_collision + cost_time + cost_constraints;
 }
 
