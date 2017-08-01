@@ -61,7 +61,8 @@ struct NonlinearOptimizationParameters {
         min_bound(Eigen::Vector3d::Zero()),
         max_bound(Eigen::Vector3d::Zero()),
         use_numeric_grad(false),
-        set_bounds_with_constraints(false) {}
+        set_bounds_with_constraints(false),
+        is_potential(true) {}
 
   // Stopping criteria, if objective function changes less than absolute value.
   // Disabled if negative.
@@ -161,6 +162,9 @@ struct NonlinearOptimizationParameters {
   // Set the bounds of the optimization parameters with the constraints given
   // (map-->position, v_max, a_max)
   bool set_bounds_with_constraints;
+
+  // TODO: Debug only
+  bool is_potential;
 };
 
 class OptimizationInfo {

@@ -1217,11 +1217,18 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
     if (grad_c_potential.empty()) {
       std::cout << "GRAD EMPTY --> SET ZERO" << std::endl;
       grad_c_potential = std::vector<double>(3, 0.0);
+      grad_c_esdf = std::vector<double>(3, 0.0);
     }
 
-    (*gradient)[0] = grad_c_potential[0];
-    (*gradient)[1] = grad_c_potential[1];
-    (*gradient)[2] = grad_c_potential[2];
+    if (data->optimization_parameters_.is_potential) {
+      (*gradient)[0] = grad_c_potential[0];
+      (*gradient)[1] = grad_c_potential[1];
+      (*gradient)[2] = grad_c_potential[2];
+    } else {
+      (*gradient)[0] = -grad_c_esdf[0];
+      (*gradient)[1] = -grad_c_esdf[1];
+      (*gradient)[2] = -grad_c_esdf[2];
+    }
   }
 
   return J_c_esdf;
