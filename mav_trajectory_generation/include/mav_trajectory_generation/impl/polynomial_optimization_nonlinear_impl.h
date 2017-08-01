@@ -1181,6 +1181,7 @@ double PolynomialOptimizationNonLinear<_N
             &grad_d, optimization_data);
     J_c = optimization_data->getCostAndGradientCollision(
             &grad_c, optimization_data);
+    J_t = optimization_data->getCostAndGradientTime(&grad_t, optimization_data);
     if (optimization_data->optimization_parameters_.use_soft_constraints) {
       J_sc = optimization_data->getCostAndGradientSoftConstraints(
               &grad_sc, optimization_data);
@@ -1192,14 +1193,12 @@ double PolynomialOptimizationNonLinear<_N
             NULL, optimization_data);
     J_c = optimization_data->getCostAndGradientCollision(
             NULL, optimization_data);
+    J_t = optimization_data->getCostAndGradientTime(NULL, optimization_data);
     if (optimization_data->optimization_parameters_.use_soft_constraints) {
       J_sc = optimization_data->getCostAndGradientSoftConstraints(
               NULL, optimization_data);
     }
   }
-  const double total_time = computeTotalTrajectoryTime(segment_times);
-  J_t = total_time * total_time *
-          optimization_data->optimization_parameters_.time_penalty;
 
   // Numerical gradients for collision cost
   if (!gradient.empty()) {
@@ -1269,12 +1268,11 @@ double PolynomialOptimizationNonLinear<_N
     gradient.resize(3*n_free_constraints);
 
     for (int i = 0; i < n_free_constraints; ++i) {
-      gradient[0 * n_free_constraints + i] =
-              w_d * grad_d[0][i] + w_c * grad_c[0][i] + w_t * grad_t[0][i];
-      gradient[1 * n_free_constraints + i] =
-              w_d * grad_d[1][i] + w_c * grad_c[1][i] + w_t * grad_t[1][i];
-      gradient[2 * n_free_constraints + i] =
-              w_d * grad_d[2][i] + w_c * grad_c[2][i] + w_t * grad_t[2][i];
+      for (int k = 0; k < dim; ++k) {
+        gradient[k * n_free_constraints + i] =
+                w_d * grad_d[k][i] + w_c * grad_c[k][i] +
+                        w_t * grad_t[k][i] + w_sc * grad_sc[k][i];
+      }
     }
   }
 
@@ -1693,6 +1691,82 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientSoftConstraints(
           data->inequality_constraints_,
           data->optimization_parameters_.soft_constraint_weight);
   return J_sc;
+}
+
+template <int _N>
+double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
+        std::vector<Eigen::VectorXd>* gradients, void* opt_data) {
+  CHECK_NOTNULL(opt_data);
+
+  PolynomialOptimizationNonLinear<N>* data =
+          static_cast<PolynomialOptimizationNonLinear<N>*>(opt_data);
+
+  double total_time = 0.0;
+  std::vector<double> segment_times;
+  if (gradients != NULL) {
+    const size_t n_free_constraints =
+            data->poly_opt_.getNumberFreeConstraints();
+    const size_t n_segments = data->poly_opt_.getNumberSegments();
+    const size_t dim = data->poly_opt_.getDimension();
+
+    gradients->clear();
+    gradients->resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+
+    // Get the current free constraints
+    std::vector<Eigen::VectorXd> free_constraints;
+    data->poly_opt_.getFreeConstraints(&free_constraints);
+
+    std::vector<Eigen::VectorXd> free_constraints_left, free_constraints_right;
+    free_constraints_left.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+    free_constraints_right.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+    double increment_dist = data->optimization_parameters_.map_resolution;
+
+    std::vector<Eigen::VectorXd> increment(dim, Eigen::VectorXd::Zero
+            (n_free_constraints));
+    for (int k = 0; k < dim; ++k) {
+
+      increment.clear();
+      increment.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+      for (int n = 0; n < n_free_constraints; ++n) {
+
+        increment[k].setZero();
+        increment[k][n] = increment_dist;
+
+        for (int k2 = 0; k2 < dim; ++k2) {
+          free_constraints_left[k2] = free_constraints[k2] - increment[k2];
+        }
+        data->poly_opt_.setFreeConstraints(free_constraints_left);
+        segment_times.clear();
+        data->poly_opt_.getSegmentTimes(&segment_times);
+        double total_time = computeTotalTrajectoryTime(segment_times);
+        double cost_left = total_time * total_time *
+                data->optimization_parameters_.time_penalty;
+
+        for (int k2 = 0; k2 < dim; ++k2) {
+          free_constraints_right[k2] = free_constraints[k2] + increment[k2];
+        }
+        data->poly_opt_.setFreeConstraints(free_constraints_right);
+        segment_times.clear();
+        data->poly_opt_.getSegmentTimes(&segment_times);
+        total_time = computeTotalTrajectoryTime(segment_times);
+        double cost_right = total_time * total_time *
+                data->optimization_parameters_.time_penalty;
+
+        double grad_k_n = (cost_right - cost_left) / (2.0 * increment_dist);
+        gradients->at(k)[n] = grad_k_n;
+      }
+    }
+
+    // Set again the original constraints from before calculating the numerical
+    // constraints
+    data->poly_opt_.setFreeConstraints(free_constraints);
+  }
+
+  data->poly_opt_.getSegmentTimes(&segment_times);
+  total_time = computeTotalTrajectoryTime(segment_times);
+  double J_t = total_time * total_time *
+          data->optimization_parameters_.time_penalty;
+  return J_t;
 }
 
 template <int _N>
