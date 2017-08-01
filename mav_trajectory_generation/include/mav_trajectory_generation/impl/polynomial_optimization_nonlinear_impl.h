@@ -590,8 +590,8 @@ int PolynomialOptimizationNonLinear<_N
   }
 
   // Save the trajectory from the initial guess/solution
-  trajectory_initial_.clear();
-  getTrajectory(&trajectory_initial_);
+  trajectory_initial_after_removing_pos_.clear();
+  getTrajectory(&trajectory_initial_after_removing_pos_);
 
   // Get segment times
   poly_opt_.getSegmentTimes(&segment_times);
@@ -1225,6 +1225,11 @@ double PolynomialOptimizationNonLinear<_N
     std::cout << "  sum: " << cost_trajectory + cost_collision + cost_time +
                               cost_constraints << std::endl;
   }
+
+  // Save the trajectory of this iteration
+  Trajectory trajectory_i;
+  optimization_data->getTrajectory(&trajectory_i);
+  optimization_data->all_trajectories_.push_back(trajectory_i);
 
   optimization_data->optimization_info_.n_iterations++;
   optimization_data->optimization_info_.cost_trajectory = cost_trajectory;

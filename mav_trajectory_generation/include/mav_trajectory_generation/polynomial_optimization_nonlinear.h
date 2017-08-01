@@ -248,6 +248,7 @@ class PolynomialOptimizationNonLinear {
     CHECK_NOTNULL(trajectory);
     Segment::Vector segments;
     trajectory_initial_.getSegments(&segments);
+    CHECK(!segments.empty());
     trajectory->setSegments(segments);
   }
 
@@ -256,6 +257,7 @@ class PolynomialOptimizationNonLinear {
     CHECK_NOTNULL(trajectory);
     Segment::Vector segments;
     trajectory_initial_after_removing_pos_.getSegments(&segments);
+    CHECK(!segments.empty());
     trajectory->setSegments(segments);
   }
 
@@ -268,6 +270,7 @@ class PolynomialOptimizationNonLinear {
       Trajectory traj_i;
       Segment::Vector segments;
       all_trajectories_[i].getSegments(&segments);
+      CHECK(!segments.empty());
       traj_i.setSegments(segments);
       trajectories->push_back(traj_i);
     }
