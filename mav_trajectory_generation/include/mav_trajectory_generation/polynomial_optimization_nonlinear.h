@@ -251,6 +251,28 @@ class PolynomialOptimizationNonLinear {
     trajectory->setSegments(segments);
   }
 
+  // Get the trajectory of the initial solution given to the nonlinear solver
+  void getInitialTrajectoryAfterRemovingPos(Trajectory* trajectory) const {
+    CHECK_NOTNULL(trajectory);
+    Segment::Vector segments;
+    trajectory_initial_after_removing_pos_.getSegments(&segments);
+    trajectory->setSegments(segments);
+  }
+
+  // Get all trajectories from each nlopt iteration
+  void getAllTrajectories(std::vector<Trajectory>* trajectories) const {
+    CHECK_NOTNULL(trajectories);
+    trajectories->reserve(all_trajectories_.size());
+
+    for (int i = 0; i < all_trajectories_.size(); ++i) {
+      Trajectory traj_i;
+      Segment::Vector segments;
+      all_trajectories_[i].getSegments(&segments);
+      traj_i.setSegments(segments);
+      trajectories->push_back(traj_i);
+    }
+  }
+
   // Returns a const reference to the underlying linear optimization
   // object.
   const PolynomialOptimization<N>& getPolynomialOptimizationRef() const {
@@ -316,7 +338,7 @@ class PolynomialOptimizationNonLinear {
   // Input: gradient = Gradient of the objective function wrt. changes of
   // parameters.
   // We CANNOT compute the gradient analytically here.
-  // --> Thus, only gradient-free optimization methods are possible.
+  // --> Thus, only gradient free optimization methods are possible.
   // Input: data = Custom data pointer. In our case, it's an ConstraintData
   // object.
   // Output: Cost based on the parameters passed in.
@@ -389,10 +411,18 @@ class PolynomialOptimizationNonLinear {
           std::vector<Eigen::VectorXd>* gradients, void* data);
 
   // Calculate the cost and gradient of the collision potential at the
-  // current position. (See paper [3]
+  // current position. (See paper [3])
   static double getCostAndGradientPotentialESDF(
           const Eigen::VectorXd& position, Eigen::VectorXd* gradient,
-          void* data);
+          void* opt_data);
+
+  // Calculate the numerical gradients of the collision potential.
+  static void getNumericalGradientsCollision(
+          std::vector<Eigen::VectorXd>* gradients, void* opt_data);
+
+  // Calculate the numerical gradients of the cost of the soft constraints.
+  static double getCostAndGradientSoftConstraints(
+          std::vector<Eigen::VectorXd>* gradients, void* opt_data);
 
   // Calculate the cost of the collision potential at a given distance to the
   // obstacle (ie. current distance to obstacle)
@@ -488,6 +518,11 @@ class PolynomialOptimizationNonLinear {
 
   // Linear solution / Initial guess
   Trajectory trajectory_initial_;
+  Trajectory trajectory_initial_after_removing_pos_;
+  std::vector<Trajectory> all_trajectories_;
+
+  std::vector<double> lower_bounds_;
+  std::vector<double> upper_bounds_;
 };
 
 }  // namespace mav_trajectory_generation

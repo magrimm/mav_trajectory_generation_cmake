@@ -117,6 +117,10 @@ bool PolynomialOptimizationNonLinear<_N
   // compute initial solution
   poly_opt_.solveLinear();
 
+  // Save the trajectory from the initial guess/solution
+  trajectory_initial_.clear();
+  getTrajectory(&trajectory_initial_);
+
   // Get dimension
   const size_t dim = poly_opt_.getDimension();
 
@@ -150,9 +154,9 @@ bool PolynomialOptimizationNonLinear<_N
   setupFromVertices(vertices_, segment_times, derivative_to_optimize_);
 
   // TODO: needed? find runtime error
-  // Add inequality constraints again after reset nlopt_
-//  for (const auto& constraint_data : inequality_constraints_) {
-//    if (!optimization_parameters_.use_soft_constraints) {
+//  // Add inequality constraints again after reset nlopt_ --> Hard constraint
+//  if (!optimization_parameters_.use_soft_constraints) {
+//    for (const auto& constraint_data : inequality_constraints_) {
 //      try {
 //        nlopt_->add_inequality_constraint(
 //                &PolynomialOptimizationNonLinear<
@@ -354,8 +358,8 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
   }
 
   // Save the trajectory from the initial guess/solution
-  trajectory_initial_.clear();
-  getTrajectory(&trajectory_initial_);
+  trajectory_initial_after_removing_pos_.clear();
+  getTrajectory(&trajectory_initial_after_removing_pos_);
 
   // Get and check free constraints and get number of optimization variables
   std::vector<Eigen::VectorXd> free_constraints;
@@ -448,6 +452,10 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
     }
   }
 
+  // TODO: REMOVE only debug
+  lower_bounds_ = lower_bounds;
+  upper_bounds_ = upper_bounds;
+
   initial_step.reserve(n_optmization_variables);
   for (double x : initial_solution) {
     const double abs_x = std::abs(x);
@@ -482,7 +490,7 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
   int result;
 
   try {
-    timing::Timer timer_solve("optimize_nonlinear_full_total_time");
+    timing::Timer timer_solve("optimize_nlin_free_constraints_and_collision");
     result = nlopt_->optimize(initial_solution, final_cost);
     timer_solve.Stop();
   } catch (std::exception& e) {
@@ -1002,84 +1010,71 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
 
   optimization_data->poly_opt_.setFreeConstraints(free_constraints);
 
-  std::vector<Eigen::VectorXd> grad_d, grad_c;
+
+  std::cout << "LOWER BOUNDS -- FREE CONSTRAINTS -- UPPER BOUNDS" << std::endl;
+  for (size_t d = 0; d < dim; ++d) {
+    for (int i = 0; i < free_constraints[0].size(); ++i) {
+      const size_t idx_start = d * n_free_constraints;
+      std::cout << d << " " << i << ": "
+                << optimization_data->lower_bounds_[idx_start+i] << " | "
+                << free_constraints[d][i] << " | "
+                << optimization_data->upper_bounds_[idx_start+i] << std::endl;
+    }
+    std::cout << std::endl;
+  }
+  std::cout << std::endl;
+
+  std::vector<Eigen::VectorXd> grad_d, grad_c, grad_sc;
   double J_d = 0.0;
   double J_c = 0.0;
+  double J_sc = 0.0;
   if (!gradient.empty()) {
     J_d = optimization_data->getCostAndGradientDerivative(
             &grad_d, optimization_data);
     J_c = optimization_data->getCostAndGradientCollision(
             &grad_c, optimization_data);
+    if (optimization_data->optimization_parameters_.use_soft_constraints) {
+      J_sc = optimization_data->getCostAndGradientSoftConstraints(
+              &grad_sc, optimization_data);
+    } else { // If not used, resize and set everything to zero
+      grad_sc.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+    }
   } else {
     J_d = optimization_data->getCostAndGradientDerivative(
             NULL, optimization_data);
     J_c = optimization_data->getCostAndGradientCollision(
             NULL, optimization_data);
+    if (optimization_data->optimization_parameters_.use_soft_constraints) {
+      J_sc = optimization_data->getCostAndGradientSoftConstraints(
+              NULL, optimization_data);
+    }
   }
 
-  //////////////////////////////////////////////////////////////////////////////
-  // TODO: Numerical gradients for collision cost
-  std::vector<Eigen::VectorXd> grad_c_numeric(dim, Eigen::VectorXd::Zero
-          (n_free_constraints));
+  // Numerical gradients for collision cost
   if (!gradient.empty()) {
-    std::vector<Eigen::VectorXd> free_constraints_left, free_constraints_right;
-    free_constraints_left.resize(dim,
-                                 Eigen::VectorXd::Zero(n_free_constraints));
-    free_constraints_right.resize(dim,
-                                  Eigen::VectorXd::Zero(n_free_constraints));
-    double increment_dist = 0.05; // map resolution
+    if (optimization_data->optimization_parameters_.use_numeric_grad) {
+      std::vector<Eigen::VectorXd> grad_c_numeric(dim, Eigen::VectorXd::Zero
+              (n_free_constraints));
 
-    std::vector<Eigen::VectorXd> increment(dim, Eigen::VectorXd::Zero
-            (n_free_constraints));
-    for (int k = 0; k < dim; ++k) {
+      optimization_data->getNumericalGradientsCollision(&grad_c_numeric,
+                                                        optimization_data);
 
-      increment.clear();
-      increment.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
-      for (int n = 0; n < n_free_constraints; ++n) {
-
-        increment[k].setZero();
-        increment[k][n] = increment_dist;
-
-        for (int k2 = 0; k2 < dim; ++k2) {
-          free_constraints_left[k2] = free_constraints[k2] - increment[k2];
+      std::cout << "grad_c | grad_c_numeric | diff | grad_sc: " << std::endl;
+      for (int k = 0; k < dim; ++k) {
+        for (int n = 0; n < n_free_constraints; ++n) {
+          std::cout << k << " " << n << ": " << grad_c[k][n] << " | "
+                    << grad_c_numeric[k][n] << " | "
+                    << grad_c[k][n] - grad_c_numeric[k][n] << " | "
+                    << grad_sc[k][n] << std::endl;
         }
-        optimization_data->poly_opt_.setFreeConstraints(free_constraints_left);
-        double cost_left = optimization_data->getCostAndGradientCollision(
-                NULL, optimization_data);
-
-        for (int k2 = 0; k2 < dim; ++k2) {
-          free_constraints_right[k2] = free_constraints[k2] + increment[k2];
-        }
-        optimization_data->poly_opt_.setFreeConstraints(free_constraints_right);
-        double cost_right = optimization_data->getCostAndGradientCollision(
-                NULL, optimization_data);
-
-        double grad_k_n = (cost_right - cost_left) / (2.0 * increment_dist);
-        grad_c_numeric[k][n] = grad_k_n;
-      }
-    }
-
-    std::cout << "grad_c | grad_c_numeric | diff: " << std::endl;
-    for (int k = 0; k < dim; ++k) {
-      for (int n = 0; n < n_free_constraints; ++n) {
-        std::cout << k << " " << n << ": " << grad_c[k][n] << " | "
-                  << grad_c_numeric[k][n] << " | "
-                  << grad_c[k][n] - grad_c_numeric[k][n] << std::endl;
+        std::cout << std::endl;
       }
       std::cout << std::endl;
+
+      for (int k = 0; k < dim; ++k) {
+        grad_c[k] = grad_c_numeric[k];
+      }
     }
-    std::cout << std::endl;
-
-    optimization_data->poly_opt_.setFreeConstraints(free_constraints);
-  }
-  //////////////////////////////////////////////////////////////////////////////
-
-  // TODO: Include soft constraint cost here?
-  double J_sc = 0.0;
-  if (optimization_data->optimization_parameters_.use_soft_constraints) {
-    J_sc = optimization_data->evaluateMaximumMagnitudeAsSoftConstraint(
-            optimization_data->inequality_constraints_,
-            optimization_data->optimization_parameters_.soft_constraint_weight);
   }
 
   // Weighting terms for different costs
@@ -1103,6 +1098,11 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
             cost_constraints << std::endl;
   }
 
+  // Save the trajectory of this iteration
+  Trajectory trajectory_i;
+  optimization_data->getTrajectory(&trajectory_i);
+  optimization_data->all_trajectories_.push_back(trajectory_i);
+
   optimization_data->optimization_info_.n_iterations++;
   optimization_data->optimization_info_.cost_trajectory = cost_trajectory;
   optimization_data->optimization_info_.cost_collision = cost_collision;
@@ -1113,19 +1113,11 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
     gradient.clear();
     gradient.resize(3*n_free_constraints);
 
-    if (optimization_data->optimization_parameters_.use_numeric_grad) {
-      for (int k = 0; k < dim; ++k) {
-        grad_c[k] = grad_c_numeric[k];
-      }
-    }
-
     for (int i = 0; i < n_free_constraints; ++i) {
-      gradient[0 * n_free_constraints + i] =
-              w_d * grad_d[0][i] + w_c * grad_c[0][i];
-      gradient[1 * n_free_constraints + i] =
-              w_d * grad_d[1][i] + w_c * grad_c[1][i];
-      gradient[2 * n_free_constraints + i] =
-              w_d * grad_d[2][i] + w_c * grad_c[2][i];
+      for (int k = 0; k < dim; ++k) {
+        gradient[k * n_free_constraints + i] =
+                w_d * grad_d[k][i] + w_c * grad_c[k][i] + w_sc * grad_sc[k][i];
+      }
     }
   }
 
@@ -1448,7 +1440,6 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
 
       // Cost and gradient of potential map from esdf
       Eigen::VectorXd grad_c_d_f(dim); // dc/dd_f
-
       double c = 0.0;
       if (gradients != NULL) {
         c = getCostAndGradientPotentialESDF(pos, &grad_c_d_f, data);
@@ -1458,7 +1449,6 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
 
       // Cost per segment and time sample
       double J_c_i_t = c * vel.norm() * time_sum;
-
       J_c += J_c_i_t;
 
       if (gradients != NULL) {
@@ -1518,21 +1508,161 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
   if (gradient != NULL) {
     std::vector<double> grad_c_esdf = data->sdf_->GetGradient3d(position, true);
 
+    // Numerical gradients
+    std::vector<double> grad_c_potential(data->dimension_);
+    double increment_dist = 0.05; // map resolution
+    Eigen::VectorXd increment(data->dimension_);
+    for (int k = 0; k < data->dimension_; ++k) {
+      increment.setZero();
+      increment[k] = increment_dist;
+
+      // Get distance and potential cost from collision at current position
+      double left_dist = data->sdf_->Get3d(position-increment);
+      double left_cost = data->getCostPotential(left_dist);
+      double right_dist = data->sdf_->Get3d(position+increment);
+      double right_cost = data->getCostPotential(right_dist);
+
+      grad_c_potential[k] += (right_cost - left_cost) / (2.0 * increment_dist);
+    }
     // TODO: GET RID --> only debug (adjust opti param boundaries lower_ upper_)
     // TODO: BUGGGGGGG
-    if (grad_c_esdf.empty()) {
-      LOG(INFO) << "GRAD EMPTY --> SET ZERO";
+    if (grad_c_potential.empty()) {
       std::cout << "GRAD EMPTY --> SET ZERO" << std::endl;
-      grad_c_esdf = std::vector<double>(3, 0.0);
+      grad_c_potential = std::vector<double>(3, 0.0);
     }
 
-    // -grad, since sdf has different grad direction convention
-    (*gradient)[0] = -grad_c_esdf[0];
-    (*gradient)[1] = -grad_c_esdf[1];
-    (*gradient)[2] = -grad_c_esdf[2];
+    (*gradient)[0] = grad_c_potential[0];
+    (*gradient)[1] = grad_c_potential[1];
+    (*gradient)[2] = grad_c_potential[2];
   }
 
   return J_c_esdf;
+}
+
+template <int _N>
+void PolynomialOptimizationNonLinear<_N>::getNumericalGradientsCollision(
+        std::vector<Eigen::VectorXd>* gradients_num, void* opt_data) {
+  CHECK_NOTNULL(opt_data);
+  CHECK_NOTNULL(gradients_num); // Num gradients only needed for grad-based opti
+
+  PolynomialOptimizationNonLinear<N>* data =
+          static_cast<PolynomialOptimizationNonLinear<N>*>(opt_data);
+
+  const size_t n_free_constraints =
+          data->poly_opt_.getNumberFreeConstraints();
+  const size_t dim = data->poly_opt_.getDimension();
+
+  // Get the current free constraints
+  std::vector<Eigen::VectorXd> free_constraints;
+  data->poly_opt_.getFreeConstraints(&free_constraints);
+
+  gradients_num->clear();
+  gradients_num->resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+
+  std::vector<Eigen::VectorXd> free_constraints_left, free_constraints_right;
+  free_constraints_left.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+  free_constraints_right.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+  double increment_dist = data->optimization_parameters_.map_resolution;
+
+  std::vector<Eigen::VectorXd> increment(dim, Eigen::VectorXd::Zero
+          (n_free_constraints));
+  for (int k = 0; k < dim; ++k) {
+
+    increment.clear();
+    increment.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+    for (int n = 0; n < n_free_constraints; ++n) {
+
+      increment[k].setZero();
+      increment[k][n] = increment_dist;
+
+      for (int k2 = 0; k2 < dim; ++k2) {
+        free_constraints_left[k2] = free_constraints[k2] - increment[k2];
+      }
+      data->poly_opt_.setFreeConstraints(free_constraints_left);
+      double cost_left = data->getCostAndGradientCollision(NULL, data);
+
+      for (int k2 = 0; k2 < dim; ++k2) {
+        free_constraints_right[k2] = free_constraints[k2] + increment[k2];
+      }
+      data->poly_opt_.setFreeConstraints(free_constraints_right);
+      double cost_right = data->getCostAndGradientCollision(NULL, data);
+
+      double grad_k_n = (cost_right - cost_left) / (2.0 * increment_dist);
+      gradients_num->at(k)[n] = grad_k_n;
+    }
+  }
+
+  // Set again the original constraints from before calculating the numerical
+  // constraints
+  data->poly_opt_.setFreeConstraints(free_constraints);
+}
+
+template <int _N>
+double PolynomialOptimizationNonLinear<_N>::getCostAndGradientSoftConstraints(
+        std::vector<Eigen::VectorXd>* gradients, void* opt_data) {
+  CHECK_NOTNULL(opt_data);
+
+  PolynomialOptimizationNonLinear<N>* data =
+          static_cast<PolynomialOptimizationNonLinear<N>*>(opt_data);
+
+  if (gradients != NULL) {
+    const size_t n_free_constraints =
+            data->poly_opt_.getNumberFreeConstraints();
+    const size_t dim = data->poly_opt_.getDimension();
+
+    gradients->clear();
+    gradients->resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+
+    // Get the current free constraints
+    std::vector<Eigen::VectorXd> free_constraints;
+    data->poly_opt_.getFreeConstraints(&free_constraints);
+
+    std::vector<Eigen::VectorXd> free_constraints_left, free_constraints_right;
+    free_constraints_left.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+    free_constraints_right.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+    double increment_dist = data->optimization_parameters_.map_resolution;
+
+    std::vector<Eigen::VectorXd> increment(dim, Eigen::VectorXd::Zero
+            (n_free_constraints));
+    for (int k = 0; k < dim; ++k) {
+
+      increment.clear();
+      increment.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+      for (int n = 0; n < n_free_constraints; ++n) {
+
+        increment[k].setZero();
+        increment[k][n] = increment_dist;
+
+        for (int k2 = 0; k2 < dim; ++k2) {
+          free_constraints_left[k2] = free_constraints[k2] - increment[k2];
+        }
+        data->poly_opt_.setFreeConstraints(free_constraints_left);
+        double cost_left = data->evaluateMaximumMagnitudeAsSoftConstraint(
+                data->inequality_constraints_,
+                data->optimization_parameters_.soft_constraint_weight);
+
+        for (int k2 = 0; k2 < dim; ++k2) {
+          free_constraints_right[k2] = free_constraints[k2] + increment[k2];
+        }
+        data->poly_opt_.setFreeConstraints(free_constraints_right);
+        double cost_right = data->evaluateMaximumMagnitudeAsSoftConstraint(
+                data->inequality_constraints_,
+                data->optimization_parameters_.soft_constraint_weight);
+
+        double grad_k_n = (cost_right - cost_left) / (2.0 * increment_dist);
+        gradients->at(k)[n] = grad_k_n;
+      }
+    }
+
+    // Set again the original constraints from before calculating the numerical
+    // constraints
+    data->poly_opt_.setFreeConstraints(free_constraints);
+  }
+
+  double J_sc = data->evaluateMaximumMagnitudeAsSoftConstraint(
+          data->inequality_constraints_,
+          data->optimization_parameters_.soft_constraint_weight);
+  return J_sc;
 }
 
 template <int _N>
