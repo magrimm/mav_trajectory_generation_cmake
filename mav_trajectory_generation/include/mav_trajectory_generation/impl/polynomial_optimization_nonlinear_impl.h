@@ -1268,7 +1268,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
 
     // Numerical gradients
     std::vector<double> grad_c_potential(data->dimension_);
-    double increment_dist = 0.05; // map resolution
+    double increment_dist = data->optimization_parameters_.map_resolution;
     Eigen::VectorXd increment(data->dimension_);
     for (int k = 0; k < data->dimension_; ++k) {
       increment.setZero();
