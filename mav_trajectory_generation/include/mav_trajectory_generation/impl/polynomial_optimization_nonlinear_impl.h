@@ -1161,7 +1161,13 @@ double PolynomialOptimizationNonLinear<_N
   optimization_data->poly_opt_.updateSegmentTimes(segment_times);
   optimization_data->poly_opt_.setFreeConstraints(free_constraints);
 
-//  std::cout << "4 FREE CONSTRAINTS" << std::endl;
+  std::cout << "SEGMENT TIMES" << std::endl;
+  for (int j = 0; j < segment_times.size(); ++j) {
+    std::cout << j << ": " << segment_times[j] << std::endl;
+  }
+  std::cout << std::endl;
+
+//  std::cout << "FREE CONSTRAINTS" << std::endl;
 //  for (int i = 0; i < free_constraints[0].size(); ++i) {
 //    std::cout << i << ": " << free_constraints[0][i] << " | "
 //              << free_constraints[1][i] << " | "
@@ -1170,7 +1176,6 @@ double PolynomialOptimizationNonLinear<_N
 //  }
 //  std::cout << std::endl;
 
-  // TODO: calculate grad_t
   std::vector<Eigen::VectorXd> grad_d, grad_c, grad_t, grad_sc;
   double J_d = 0.0;
   double J_c = 0.0;
@@ -1209,13 +1214,15 @@ double PolynomialOptimizationNonLinear<_N
       optimization_data->getNumericalGradientsCollision(&grad_c_numeric,
                                                         optimization_data);
 
-      std::cout << "grad_c | grad_c_numeric | diff | grad_sc: " << std::endl;
+      std::cout << "grad_c | grad_c_numeric | diff | grad_sc | grad_t: "
+                << std::endl;
       for (int k = 0; k < dim; ++k) {
         for (int n = 0; n < n_free_constraints; ++n) {
           std::cout << k << " " << n << ": " << grad_c[k][n] << " | "
                     << grad_c_numeric[k][n] << " | "
                     << grad_c[k][n] - grad_c_numeric[k][n] << " | "
-                    << grad_sc[k][n] << std::endl;
+                    << grad_sc[k][n] << " | "
+                    << grad_t[k][n] << std::endl;
         }
         std::cout << std::endl;
       }
@@ -1263,6 +1270,7 @@ double PolynomialOptimizationNonLinear<_N
   optimization_data->optimization_info_.cost_soft_constraints =
           cost_constraints;
 
+  // TODO: gradient size = n_sgements + 3*n_free_constraints
   if (!gradient.empty()) {
     gradient.clear();
     gradient.resize(3*n_free_constraints);
@@ -1736,6 +1744,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
           free_constraints_left[k2] = free_constraints[k2] - increment[k2];
         }
         data->poly_opt_.setFreeConstraints(free_constraints_left);
+        // TODO: HOW TO CALCULATE GARD PROPERLY?
         segment_times.clear();
         data->poly_opt_.getSegmentTimes(&segment_times);
         double total_time = computeTotalTrajectoryTime(segment_times);
