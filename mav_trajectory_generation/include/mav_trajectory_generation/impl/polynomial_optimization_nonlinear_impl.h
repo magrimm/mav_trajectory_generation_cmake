@@ -1169,6 +1169,36 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
       double J_c_i_t = c * vel.norm() * time_sum;
       J_c += J_c_i_t;
 
+      // TODO: Only DEBUG
+      // Numerical gradients
+      if (data->optimization_parameters_.use_numeric_grad) {
+        double increment_dist = data->optimization_parameters_.map_resolution;
+        Eigen::VectorXd increment(dim);
+        Eigen::VectorXd grad_c_k_num(dim);
+        grad_c_k_num.setZero();
+        for (int k = 0; k < dim; ++k) {
+          increment.setZero();
+          increment[k] = increment_dist;
+
+          double cost_left = getCostAndGradientPotentialESDF(
+                  pos - increment, NULL, data);
+          double cost_right = getCostAndGradientPotentialESDF(
+                  pos + increment, NULL, data);
+          grad_c_k_num[k] += (cost_right - cost_left) / (2.0 * increment_dist);
+
+          if (optimization_parameters_.print_debug_info) {
+            std::cout << "grad_c_k_num[" << k << "]: " << grad_c_k_num[k]
+                      << " = (" << cost_right << " - " << cost_left
+                      << ") / (2.0 * " << increment_dist << ")" << std::endl;
+          }
+        }
+
+        if (optimization_parameters_.print_debug_info) {
+          std::cout << "grad_c_d_f: " << grad_c_d_f[0] << " | "
+                    << grad_c_d_f[1] << " | " << grad_c_d_f[2] << std::endl;
+        }
+      }
+
       if (gradients != NULL) {
         // Norm has to be non-zero
         if (vel.norm() > 1e-6) {
