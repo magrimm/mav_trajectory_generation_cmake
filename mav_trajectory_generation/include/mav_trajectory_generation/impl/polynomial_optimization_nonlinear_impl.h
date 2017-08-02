@@ -1253,6 +1253,14 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
   // Get potential cost from distance to collision
   double J_c_esdf = data->getCostPotential(distance);
 
+  if (position[0] < -10.45 || position[0] > 2.35 || position[1] < -8.35 ||
+      position[1] > 5.65 || position[2] < -1.30 || position[2] > 3.4) {
+    std::cout << "position: " << position[0] << " | "
+              << position[1] << " | " << position[2]
+              << " || distance: " << distance
+              << " | J_c_esdf: " << J_c_esdf << std::endl;
+  }
+
   if (gradient != NULL) {
     std::vector<double> grad_c_esdf = data->sdf_->GetGradient3d(position, true);
 
@@ -1272,6 +1280,18 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
 
       grad_c_potential[k] += (right_cost - left_cost) / (2.0 * increment_dist);
     }
+
+    if (position[0] < -10.45 || position[0] > 2.35 || position[1] < -8.35 ||
+        position[1] > 5.65 || position[2] < -1.30 || position[2] > 3.4) {
+      if (data->optimization_parameters_.is_potential) {
+        std::cout << "grad_c_potential: ";
+        for (int i = 0; i < grad_c_potential.size(); ++i) {
+          std::cout << grad_c_potential[i] << " | ";
+        }
+        std::cout << std::endl;
+      }
+    }
+
     // TODO: GET RID --> only debug (adjust opti param boundaries lower_ upper_)
     // TODO: BUGGGGGGG
     if (grad_c_potential.empty()) {
