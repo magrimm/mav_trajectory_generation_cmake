@@ -119,6 +119,18 @@ bool PolynomialOptimizationNonLinear<_N
   // Get dimension
   const size_t dim = poly_opt_.getDimension();
 
+  std::vector<Eigen::VectorXd> free_constraints;
+  poly_opt_.getFreeConstraints(&free_constraints);
+  CHECK(free_constraints.size() > 0);
+  CHECK(free_constraints.front().size() > 0);
+
+  std::cout << "OLD FREE CONSTRAINTS" << std::endl;
+  for (int i = 0; i < free_constraints[0].size(); ++i) {
+    std::cout << i << ": " << free_constraints[0][i] << " | "
+              << free_constraints[1][i] << " | "
+              << free_constraints[2][i]<< std::endl;
+  }
+  std::cout << std::endl;
 
   // Parameters before removing constraints
   const size_t n_free_constraints = poly_opt_.getNumberFreeConstraints();
@@ -192,6 +204,16 @@ bool PolynomialOptimizationNonLinear<_N
   // 7) Set free constraints of problem according to initial solution and
   // removed constraints
   poly_opt_.setFreeConstraints(d_p);
+
+  std::vector<Eigen::VectorXd> free;
+  poly_opt_.getFreeConstraints(&free);
+  std::cout << "NEW FREE CONSTRAINTS" << std::endl;
+  for (int i = 0; i < free[0].size(); ++i) {
+    std::cout << i << ": " << free[0][i] << " | "
+              << free[1][i] << " | "
+              << free[2][i] << std::endl;
+  }
+  std::cout << std::endl;
 
   return true;
 }
@@ -836,6 +858,14 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
 
   optimization_data->poly_opt_.setFreeConstraints(free_constraints);
 
+//  std::cout << "4 FREE CONSTRAINTS" << std::endl;
+//  for (int i = 0; i < free_constraints[0].size(); ++i) {
+//    std::cout << i << ": " << free_constraints[0][i] << " | "
+//              << free_constraints[1][i] << " | "
+//              << free_constraints[2][i]
+//              << std::endl;
+//  }
+//  std::cout << std::endl;
 
   std::cout << "LOWER BOUNDS -- FREE CONSTRAINTS -- UPPER BOUNDS" << std::endl;
   for (size_t d = 0; d < dim; ++d) {
