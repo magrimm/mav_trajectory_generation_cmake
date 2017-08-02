@@ -858,27 +858,29 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
 
   optimization_data->poly_opt_.setFreeConstraints(free_constraints);
 
-//  std::cout << "4 FREE CONSTRAINTS" << std::endl;
-//  for (int i = 0; i < free_constraints[0].size(); ++i) {
-//    std::cout << i << ": " << free_constraints[0][i] << " | "
-//              << free_constraints[1][i] << " | "
-//              << free_constraints[2][i]
-//              << std::endl;
-//  }
-//  std::cout << std::endl;
+  if (optimization_data->optimization_parameters_.print_debug_info) {
+//    std::cout << "4 FREE CONSTRAINTS" << std::endl;
+//    for (int i = 0; i < free_constraints[0].size(); ++i) {
+//      std::cout << i << ": " << free_constraints[0][i] << " | "
+//                << free_constraints[1][i] << " | "
+//                << free_constraints[2][i]
+//                << std::endl;
+//    }
+//    std::cout << std::endl;
 
-  std::cout << "LOWER BOUNDS -- FREE CONSTRAINTS -- UPPER BOUNDS" << std::endl;
-  for (size_t d = 0; d < dim; ++d) {
-    for (int i = 0; i < free_constraints[0].size(); ++i) {
-      const size_t idx_start = d * n_free_constraints;
-      std::cout << d << " " << i << ": "
-                << optimization_data->lower_bounds_[idx_start+i] << " | "
-                << free_constraints[d][i] << " | "
-                << optimization_data->upper_bounds_[idx_start+i] << std::endl;
+    std::cout << "LOWER BOUNDS -- FREE CONSTRAINTS -- UPPER BOUNDS" << std::endl;
+    for (size_t d = 0; d < dim; ++d) {
+      for (int i = 0; i < free_constraints[0].size(); ++i) {
+        const size_t idx_start = d * n_free_constraints;
+        std::cout << d << " " << i << ": "
+                  << optimization_data->lower_bounds_[idx_start+i] << " | "
+                  << free_constraints[d][i] << " | "
+                  << optimization_data->upper_bounds_[idx_start+i] << std::endl;
+      }
+      std::cout << std::endl;
     }
     std::cout << std::endl;
   }
-  std::cout << std::endl;
 
   std::vector<Eigen::VectorXd> grad_d, grad_c, grad_sc;
   double J_d = 0.0;
