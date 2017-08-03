@@ -1448,10 +1448,8 @@ double PolynomialOptimizationNonLinear<_N>::getCostPotential(
 
   double cost = 0.0;
 
-  // TODO: paramterize
-  double epsilon = 0.5;
-  double robot_size = 0.8;
-  double robot_radius = std::sqrt(3) * robot_size/2.0;
+  const double epsilon = optimization_parameters_.epsilon;
+  const double robot_radius = optimization_parameters_.robot_radius;
 
   collision_distance -= robot_radius;
   if (collision_distance < 0.0) {
