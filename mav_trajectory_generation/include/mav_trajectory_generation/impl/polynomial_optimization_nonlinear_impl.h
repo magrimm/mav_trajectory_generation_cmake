@@ -1457,7 +1457,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostPotential(
   } else if (collision_distance <= epsilon) {
     double epsilon_distance = collision_distance - epsilon;
     cost = 0.5 * 1.0 / epsilon * epsilon_distance * epsilon_distance;
-  } else {
+  } else { // TODO: WHAT IF DIST IS INF/not in map
     cost = 0.0;
   }
 
@@ -1468,9 +1468,6 @@ template <int _N>
 double PolynomialOptimizationNonLinear<_N>::evaluateMaximumMagnitudeConstraint(
     const std::vector<double>& segment_times, std::vector<double>& gradient,
     void* data) {
-  // TODO: How to handle soft-constraints in gradient-based case?
-//  CHECK(gradient.empty())
-//      << "computing gradient not possible, choose a gradient free method";
   ConstraintData* constraint_data =
       static_cast<ConstraintData*>(data);  // wheee ...
   PolynomialOptimizationNonLinear<N>* optimization_data =
