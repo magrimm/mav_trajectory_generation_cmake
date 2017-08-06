@@ -530,6 +530,14 @@ int PolynomialOptimizationNonLinear<_N>::optimizeTimeAndFreeConstraints() {
   CHECK(free_constraints.size() > 0);
   CHECK(free_constraints.front().size() > 0);
 
+  // TODO: FIX PROPERLY
+  // Save the trajectory from the initial guess/solution
+  trajectory_initial_.clear();
+  getTrajectory(&trajectory_initial_);
+  // Save the trajectory from the initial guess/solution
+  trajectory_initial_after_removing_pos_.clear();
+  getTrajectory(&trajectory_initial_after_removing_pos_);
+
   const size_t n_optmization_variables =
       n_segments + free_constraints.size() * free_constraints.front().size();
 
