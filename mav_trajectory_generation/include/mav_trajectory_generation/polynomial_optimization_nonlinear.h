@@ -64,7 +64,8 @@ struct NonlinearOptimizationParameters {
         set_bounds_with_constraints(false),
         is_potential(true),
         epsilon(0.5),
-        robot_radius(0.5) {}
+        robot_radius(0.5),
+        coll_pot_multiplier(1.0) {}
 
   // Stopping criteria, if objective function changes less than absolute value.
   // Disabled if negative.
@@ -170,6 +171,8 @@ struct NonlinearOptimizationParameters {
 
   double epsilon; // Obstacle clearance
   double robot_radius; // bounding box sphere radius
+
+  double coll_pot_multiplier; // Multiplier for the potential cost in collision
 };
 
 class OptimizationInfo {
