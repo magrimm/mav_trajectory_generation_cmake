@@ -80,6 +80,11 @@ bool PolynomialOptimizationNonLinear<_N>::setupFromVertices(
       n_optimization_parameters =
               poly_opt_.getNumberFreeConstraints() * poly_opt_.getDimension();
       break;
+    case NonlinearOptimizationParameters::OptimizationObjective::kOptimizeFreeConstraintsAndCollisionAndTime:
+      n_optimization_parameters =
+              segment_times.size() +
+              poly_opt_.getNumberFreeConstraints() * poly_opt_.getDimension();
+      break;
     default:
       LOG(ERROR) << "Unknown Optimization Objective. Abort.";
       break;
@@ -119,18 +124,6 @@ bool PolynomialOptimizationNonLinear<_N
   // Get dimension
   const size_t dim = poly_opt_.getDimension();
 
-  std::vector<Eigen::VectorXd> free_constraints;
-  poly_opt_.getFreeConstraints(&free_constraints);
-  CHECK(free_constraints.size() > 0);
-  CHECK(free_constraints.front().size() > 0);
-
-  std::cout << "OLD FREE CONSTRAINTS" << std::endl;
-  for (int i = 0; i < free_constraints[0].size(); ++i) {
-    std::cout << i << ": " << free_constraints[0][i] << " | "
-              << free_constraints[1][i] << " | "
-              << free_constraints[2][i]<< std::endl;
-  }
-  std::cout << std::endl;
 
   // Parameters before removing constraints
   const size_t n_free_constraints = poly_opt_.getNumberFreeConstraints();
@@ -205,16 +198,6 @@ bool PolynomialOptimizationNonLinear<_N
   // removed constraints
   poly_opt_.setFreeConstraints(d_p);
 
-  std::vector<Eigen::VectorXd> free;
-  poly_opt_.getFreeConstraints(&free);
-  std::cout << "NEW FREE CONSTRAINTS" << std::endl;
-  for (int i = 0; i < free[0].size(); ++i) {
-    std::cout << i << ": " << free[0][i] << " | "
-              << free[1][i] << " | "
-              << free[2][i] << std::endl;
-  }
-  std::cout << std::endl;
-
   return true;
 }
 
@@ -238,6 +221,9 @@ int PolynomialOptimizationNonLinear<_N>::optimize() {
       break;
     case NonlinearOptimizationParameters::OptimizationObjective::kOptimizeFreeConstraintsAndCollision:
       result = optimizeFreeConstraintsAndCollision();
+      break;
+    case NonlinearOptimizationParameters::OptimizationObjective::kOptimizeFreeConstraintsAndCollisionAndTime:
+      result = optimizeFreeConstraintsAndCollisionAndTime();
       break;
     default:
       LOG(ERROR) << "Unknown Optimization Objective. Abort.";
@@ -1419,7 +1405,19 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
   for (int k = 0; k < dim; ++k) {
     Eigen::VectorXd d_all_segments(n_fixed_constraints + n_free_constraints);
     d_all_segments.head(n_fixed_constraints) = d_f_vec[k];
-    d_all_segments.tail(n_free_constraints) = d_p_vec[k];
+
+    switch (data->optimization_parameters_.objective) {
+      case NonlinearOptimizationParameters::OptimizationObjective::kOptimizeFreeConstraintsAndCollision:
+        d_all_segments.tail(n_free_constraints) = d_p_vec[k];
+        break;
+      case NonlinearOptimizationParameters::OptimizationObjective::kOptimizeFreeConstraintsAndCollisionAndTime:
+        d_all_segments.tail(n_free_constraints) =
+                d_p_vec[k].tail(n_free_constraints);
+        break;
+      default:
+        LOG(ERROR) << "Unknown Optimization Objective. Abort.";
+        break;
+    }
 
     // The coefficients for each axis k with size (N * num_segments) x 1
     p_all_segments[k] = data->L_ * d_all_segments;

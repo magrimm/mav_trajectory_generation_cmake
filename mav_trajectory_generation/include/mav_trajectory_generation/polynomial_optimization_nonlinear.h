@@ -131,6 +131,7 @@ struct NonlinearOptimizationParameters {
     kOptimizeFreeConstraintsAndTime,
     kOptimizeTime,
     kOptimizeFreeConstraintsAndCollision,
+    kOptimizeFreeConstraintsAndCollisionAndTime,
     kUnknown
   } objective;
 
@@ -394,6 +395,24 @@ class PolynomialOptimizationNonLinear {
           const std::vector<double>& x, std::vector<double>& gradient,
           void* data);
 
+  // Objective function for optimizing the free endpoint-derivatives, the
+  // segment times and the collision potential.
+  // Input: optimization_variables = Optimization variables in the current
+  // iteration.
+  // The variables (time, derivatives) are stacked as follows:
+  // [segment_times  derivatives_dim_0 ... derivatives_dim_N]
+  // Input: gradient = Gradient of the objective function wrt. changes of
+  // parameters.
+  // We CANNOT compute the gradient analytically here.
+  // --> Thus, only gradient free optimization methods are possible.
+  // Input: data = Custom data pointer. In our case, it's an ConstraintData
+  // object.
+  // Output: Cost and gradients (only for gradient-based optimization) based
+  // on the parameters passed in.
+  static double objectiveFunctionFreeConstraintsAndCollisionAndTime(
+          const std::vector<double>& x, std::vector<double>& gradient,
+          void* data);
+
   // Calculate the cost and gradients of the squared difference of the
   // derivative to be optimized.
   static double getCostAndGradientDerivative(
@@ -445,6 +464,11 @@ class PolynomialOptimizationNonLinear {
   // with an objective function including a derivative term and the collision
   // potential.
   int optimizeFreeConstraintsAndCollision();
+
+  // Does the actual optimization work for optimizing the Free Constraints
+  // and the Segment Timeswith an objective function including a derivative
+  // term,  collision potential and time term.
+  int optimizeFreeConstraintsAndCollisionAndTime();
 
   // Evaluates the maximum magnitude constraints as soft constraints and
   // returns a cost, depending on the violation of the constraints.
