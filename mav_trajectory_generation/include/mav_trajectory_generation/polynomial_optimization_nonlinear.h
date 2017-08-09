@@ -256,6 +256,7 @@ class PolynomialOptimizationNonLinear {
     CHECK_NOTNULL(trajectory);
     Segment::Vector segments;
     trajectory_initial_.getSegments(&segments);
+    CHECK(!segments.empty());
     trajectory->setSegments(segments);
   }
 
@@ -264,6 +265,7 @@ class PolynomialOptimizationNonLinear {
     CHECK_NOTNULL(trajectory);
     Segment::Vector segments;
     trajectory_initial_after_removing_pos_.getSegments(&segments);
+    CHECK(!segments.empty());
     trajectory->setSegments(segments);
   }
 
@@ -276,6 +278,7 @@ class PolynomialOptimizationNonLinear {
       Trajectory traj_i;
       Segment::Vector segments;
       all_trajectories_[i].getSegments(&segments);
+      CHECK(!segments.empty());
       traj_i.setSegments(segments);
       trajectories->push_back(traj_i);
     }
@@ -410,7 +413,11 @@ class PolynomialOptimizationNonLinear {
   static void getNumericalGradientsCollision(
           std::vector<Eigen::VectorXd>* gradients, void* opt_data);
 
-  // Calculate the numerical gradients of the cost of the soft constraints.
+  // Calculate the numerical gradients and the cost of the segment times.
+  static double getCostAndGradientTime(
+          std::vector<Eigen::VectorXd>* gradients, void* opt_data);
+
+  // Calculate the numerical gradients and the cost of the soft constraints.
   static double getCostAndGradientSoftConstraints(
           std::vector<Eigen::VectorXd>* gradients, void* opt_data);
 
