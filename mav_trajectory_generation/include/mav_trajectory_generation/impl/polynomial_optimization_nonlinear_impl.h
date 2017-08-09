@@ -516,6 +516,14 @@ int PolynomialOptimizationNonLinear<_N>::optimizeTimeAndFreeConstraints() {
   CHECK(free_constraints.size() > 0);
   CHECK(free_constraints.front().size() > 0);
 
+  // TODO: FIX PROPERLY
+  // Save the trajectory from the initial guess/solution
+  trajectory_initial_.clear();
+  getTrajectory(&trajectory_initial_);
+  // Save the trajectory from the initial guess/solution
+  trajectory_initial_after_removing_pos_.clear();
+  getTrajectory(&trajectory_initial_after_removing_pos_);
+
   const size_t n_optmization_variables =
       n_segments + free_constraints.size() * free_constraints.front().size();
 
@@ -1010,19 +1018,20 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
 
   optimization_data->poly_opt_.setFreeConstraints(free_constraints);
 
-
-  std::cout << "LOWER BOUNDS -- FREE CONSTRAINTS -- UPPER BOUNDS" << std::endl;
-  for (size_t d = 0; d < dim; ++d) {
-    for (int i = 0; i < free_constraints[0].size(); ++i) {
-      const size_t idx_start = d * n_free_constraints;
-      std::cout << d << " " << i << ": "
-                << optimization_data->lower_bounds_[idx_start+i] << " | "
-                << free_constraints[d][i] << " | "
-                << optimization_data->upper_bounds_[idx_start+i] << std::endl;
+  if (optimization_data->optimization_parameters_.print_debug_info) {
+    std::cout << "LOWER BOUNDS -- FREE CONSTRAINTS -- UPPER BOUNDS" << std::endl;
+    for (size_t d = 0; d < dim; ++d) {
+      for (int i = 0; i < free_constraints[0].size(); ++i) {
+        const size_t idx_start = d * n_free_constraints;
+        std::cout << d << " " << i << ": "
+                  << optimization_data->lower_bounds_[idx_start+i] << " | "
+                  << free_constraints[d][i] << " | "
+                  << optimization_data->upper_bounds_[idx_start+i] << std::endl;
+      }
+      std::cout << std::endl;
     }
     std::cout << std::endl;
   }
-  std::cout << std::endl;
 
   std::vector<Eigen::VectorXd> grad_d, grad_c, grad_sc;
   double J_d = 0.0;
@@ -1487,6 +1496,36 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
       double J_c_i_t = c * vel.norm() * time_sum;
       J_c += J_c_i_t;
 
+      // TODO: Only DEBUG
+      // Numerical gradients
+      if (data->optimization_parameters_.use_numeric_grad) {
+        double increment_dist = data->optimization_parameters_.map_resolution;
+        Eigen::VectorXd increment(dim);
+        Eigen::VectorXd grad_c_k_num(dim);
+        grad_c_k_num.setZero();
+        for (int k = 0; k < dim; ++k) {
+          increment.setZero();
+          increment[k] = increment_dist;
+
+          double cost_left = getCostAndGradientPotentialESDF(
+                  pos - increment, NULL, data);
+          double cost_right = getCostAndGradientPotentialESDF(
+                  pos + increment, NULL, data);
+          grad_c_k_num[k] += (cost_right - cost_left) / (2.0 * increment_dist);
+
+          if (data->optimization_parameters_.print_debug_info) {
+            std::cout << "grad_c_k_num[" << k << "]: " << grad_c_k_num[k]
+                      << " = (" << cost_right << " - " << cost_left
+                      << ") / (2.0 * " << increment_dist << ")" << std::endl;
+          }
+        }
+
+        if (data->optimization_parameters_.print_debug_info) {
+          std::cout << "grad_c_d_f: " << grad_c_d_f[0] << " | "
+                    << grad_c_d_f[1] << " | " << grad_c_d_f[2] << std::endl;
+        }
+      }
+
       if (gradients != NULL) {
         // Norm has to be non-zero
         if (vel.norm() > 1e-6) {
@@ -1541,12 +1580,20 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
   // Get potential cost from distance to collision
   double J_c_esdf = data->getCostPotential(distance);
 
+  if (position[0] < -10.45 || position[0] > 2.35 || position[1] < -8.35 ||
+      position[1] > 5.65 || position[2] < -1.30 || position[2] > 3.4) {
+    std::cout << "position: " << position[0] << " | "
+              << position[1] << " | " << position[2]
+              << " || distance: " << distance
+              << " | J_c_esdf: " << J_c_esdf << std::endl;
+  }
+
   if (gradient != NULL) {
     std::vector<double> grad_c_esdf = data->sdf_->GetGradient3d(position, true);
 
     // Numerical gradients
     std::vector<double> grad_c_potential(data->dimension_);
-    double increment_dist = 0.05; // map resolution
+    double increment_dist = data->optimization_parameters_.map_resolution;
     Eigen::VectorXd increment(data->dimension_);
     for (int k = 0; k < data->dimension_; ++k) {
       increment.setZero();
@@ -1560,16 +1607,35 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
 
       grad_c_potential[k] += (right_cost - left_cost) / (2.0 * increment_dist);
     }
+
+    if (position[0] < -10.45 || position[0] > 2.35 || position[1] < -8.35 ||
+        position[1] > 5.65 || position[2] < -1.30 || position[2] > 3.4) {
+      if (data->optimization_parameters_.is_potential) {
+        std::cout << "grad_c_potential: ";
+        for (int i = 0; i < grad_c_potential.size(); ++i) {
+          std::cout << grad_c_potential[i] << " | ";
+        }
+        std::cout << std::endl;
+      }
+    }
+
     // TODO: GET RID --> only debug (adjust opti param boundaries lower_ upper_)
     // TODO: BUGGGGGGG
     if (grad_c_potential.empty()) {
       std::cout << "GRAD EMPTY --> SET ZERO" << std::endl;
       grad_c_potential = std::vector<double>(3, 0.0);
+      grad_c_esdf = std::vector<double>(3, 0.0);
     }
 
-    (*gradient)[0] = grad_c_potential[0];
-    (*gradient)[1] = grad_c_potential[1];
-    (*gradient)[2] = grad_c_potential[2];
+    if (data->optimization_parameters_.is_potential) {
+      (*gradient)[0] = grad_c_potential[0];
+      (*gradient)[1] = grad_c_potential[1];
+      (*gradient)[2] = grad_c_potential[2];
+    } else {
+      (*gradient)[0] = -grad_c_esdf[0];
+      (*gradient)[1] = -grad_c_esdf[1];
+      (*gradient)[2] = -grad_c_esdf[2];
+    }
   }
 
   return J_c_esdf;
@@ -1784,10 +1850,8 @@ double PolynomialOptimizationNonLinear<_N>::getCostPotential(
 
   double cost = 0.0;
 
-  // TODO: paramterize
-  double epsilon = 0.5;
-  double robot_size = 0.8;
-  double robot_radius = std::sqrt(3) * robot_size/2.0;
+  const double epsilon = optimization_parameters_.epsilon;
+  const double robot_radius = optimization_parameters_.robot_radius;
 
   collision_distance -= robot_radius;
   if (collision_distance < 0.0) {
@@ -1795,7 +1859,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostPotential(
   } else if (collision_distance <= epsilon) {
     double epsilon_distance = collision_distance - epsilon;
     cost = 0.5 * 1.0 / epsilon * epsilon_distance * epsilon_distance;
-  } else {
+  } else { // TODO: WHAT IF DIST IS INF/not in map
     cost = 0.0;
   }
 
@@ -1806,9 +1870,6 @@ template <int _N>
 double PolynomialOptimizationNonLinear<_N>::evaluateMaximumMagnitudeConstraint(
     const std::vector<double>& segment_times, std::vector<double>& gradient,
     void* data) {
-  // TODO: How to handle soft-constraints in gradient-based case?
-//  CHECK(gradient.empty())
-//      << "computing gradient not possible, choose a gradient free method";
   ConstraintData* constraint_data =
       static_cast<ConstraintData*>(data);  // wheee ...
   PolynomialOptimizationNonLinear<N>* optimization_data =
