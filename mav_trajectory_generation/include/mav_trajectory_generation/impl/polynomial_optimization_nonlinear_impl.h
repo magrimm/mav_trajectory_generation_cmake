@@ -1155,8 +1155,10 @@ double PolynomialOptimizationNonLinear<_N
   std::vector<double> segment_times;
   segment_times.reserve(n_segments);
 
+  // Retrieve optimized segment times
   for (size_t i = 0; i < n_segments; ++i) segment_times.push_back(x[i]);
 
+  // Retrieve optimized free endpoint-derivatives
   for (size_t d = 0; d < dim; ++d) {
     const size_t idx_start = n_segments + d * n_free_constraints;
 
@@ -1167,6 +1169,7 @@ double PolynomialOptimizationNonLinear<_N
     }
   }
 
+  // Set segment times and free constraints back in trajectory
   optimization_data->poly_opt_.updateSegmentTimes(segment_times);
   optimization_data->poly_opt_.setFreeConstraints(free_constraints);
 
@@ -1420,7 +1423,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
                          data->L_.rows(), n_free_constraints);
 
   double dt = 0.1; // TODO: parameterize
-  double dist_sum_limit = 0.05; // TODO: parameterize map resolution
+  double dist_sum_limit = data->optimization_parameters_.map_resolution;
 
   Eigen::VectorXd prev_pos(dim);
   prev_pos.setZero();
@@ -1438,7 +1441,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
         T[n] = pow(t, n);
       }
 
-      // Create T for all segemtnts
+      // Create T for all segments
       Eigen::VectorXd T_all_seg(n_segments * N);
       T_all_seg.setZero();
       T_all_seg.segment(i * N, N) = T;
