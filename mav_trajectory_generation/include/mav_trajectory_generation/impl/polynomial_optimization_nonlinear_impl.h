@@ -1177,7 +1177,9 @@ double PolynomialOptimizationNonLinear<_N
   for (int j = 0; j < segment_times.size(); ++j) {
     std::cout << j << ": " << segment_times[j] << std::endl;
   }
-  std::cout << std::endl;
+  std::cout << "TOTAL TRAJ TIME: "
+            << optimization_data->computeTotalTrajectoryTime(segment_times)
+            << std::endl;
 
 //  std::cout << "FREE CONSTRAINTS" << std::endl;
 //  for (int i = 0; i < free_constraints[0].size(); ++i) {
