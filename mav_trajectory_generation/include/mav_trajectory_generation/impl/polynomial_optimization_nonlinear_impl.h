@@ -1190,7 +1190,8 @@ double PolynomialOptimizationNonLinear<_N
 //  }
 //  std::cout << std::endl;
 
-  std::vector<Eigen::VectorXd> grad_d, grad_c, grad_t, grad_sc;
+  std::vector<Eigen::VectorXd> grad_d, grad_c, grad_sc;
+  std::vector<double> grad_t;
   double J_d = 0.0;
   double J_c = 0.0;
   double J_t = 0.0;
@@ -1228,19 +1229,24 @@ double PolynomialOptimizationNonLinear<_N
       optimization_data->getNumericalGradientsCollision(&grad_c_numeric,
                                                         optimization_data);
 
-      std::cout << "grad_c | grad_c_numeric | diff | grad_sc | grad_t: "
+      std::cout << "grad_c | grad_c_numeric | diff | grad_sc: "
                 << std::endl;
       for (int k = 0; k < dim; ++k) {
         for (int n = 0; n < n_free_constraints; ++n) {
           std::cout << k << " " << n << ": " << grad_c[k][n] << " | "
                     << grad_c_numeric[k][n] << " | "
                     << grad_c[k][n] - grad_c_numeric[k][n] << " | "
-                    << grad_sc[k][n] << " | "
-                    << grad_t[k][n] << std::endl;
+                    << grad_sc[k][n] << std::endl;
         }
         std::cout << std::endl;
       }
       std::cout << std::endl;
+
+      std::cout << "grad_t: " << std::endl;
+      for (int i = 0; i < n_segments; ++i) {
+        std::cout << grad_t[i] << " | ";
+      }
+      std::cout << std::endl << std::endl;
 
       for (int k = 0; k < dim; ++k) {
         grad_c[k] = grad_c_numeric[k];
