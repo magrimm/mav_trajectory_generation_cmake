@@ -1290,16 +1290,20 @@ double PolynomialOptimizationNonLinear<_N
   optimization_data->optimization_info_.cost_soft_constraints =
           cost_constraints;
 
-  // TODO: gradient size = n_sgements + 3*n_free_constraints
+  // TODO: gradient size = n_segments + 3*n_free_constraints
   if (!gradient.empty()) {
     gradient.clear();
-    gradient.resize(3*n_free_constraints);
+    gradient.resize(n_segments + 3*n_free_constraints);
+
+    for (int j = 0; j < n_segments; ++j) {
+      gradient[j] = w_t * grad_t[j];
+    }
 
     for (int i = 0; i < n_free_constraints; ++i) {
       for (int k = 0; k < dim; ++k) {
-        gradient[k * n_free_constraints + i] =
-                w_d * grad_d[k][i] + w_c * grad_c[k][i] +
-                        w_t * grad_t[k][i] + w_sc * grad_sc[k][i];
+        const int start_idx = n_segments + (k * n_free_constraints);
+        gradient[start_idx + i] =
+                w_d * grad_d[k][i] + w_c * grad_c[k][i] + w_sc * grad_sc[k][i];
       }
     }
   }
