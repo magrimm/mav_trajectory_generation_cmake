@@ -1760,78 +1760,82 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientSoftConstraints(
 
 template <int _N>
 double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
-        std::vector<Eigen::VectorXd>* gradients, void* opt_data) {
+        std::vector<double>* gradients, void* opt_data) {
   CHECK_NOTNULL(opt_data);
 
   PolynomialOptimizationNonLinear<N>* data =
           static_cast<PolynomialOptimizationNonLinear<N>*>(opt_data);
 
-  double total_time = 0.0;
+  // Weighting terms for different costs
+  double w_d = data->optimization_parameters_.weights.w_d;
+  double w_c = data->optimization_parameters_.weights.w_c;
+
   std::vector<double> segment_times;
   if (gradients != NULL) {
-    const size_t n_free_constraints =
-            data->poly_opt_.getNumberFreeConstraints();
+
     const size_t n_segments = data->poly_opt_.getNumberSegments();
-    const size_t dim = data->poly_opt_.getDimension();
 
     gradients->clear();
-    gradients->resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+    gradients->resize(n_segments);
 
-    // Get the current free constraints
-    std::vector<Eigen::VectorXd> free_constraints;
-    data->poly_opt_.getFreeConstraints(&free_constraints);
+    // Retrieve the current segment times
+    std::vector<double> segment_times;
+    data->poly_opt_.getSegmentTimes(&segment_times);
 
-    std::vector<Eigen::VectorXd> free_constraints_left, free_constraints_right;
-    free_constraints_left.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
-    free_constraints_right.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
-    double increment_dist = data->optimization_parameters_.map_resolution;
+    // Initialize changed segment times for numerical derivative
+    std::vector<double> segment_times_smaller, segment_times_bigger;
+    segment_times_smaller.resize(n_segments);
+    segment_times_bigger.resize(n_segments);
 
-    std::vector<Eigen::VectorXd> increment(dim, Eigen::VectorXd::Zero
-            (n_free_constraints));
-    for (int k = 0; k < dim; ++k) {
+    // TODO: parameterize
+    double increment_time = 0.1; // [s]
 
-      increment.clear();
-      increment.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
-      for (int n = 0; n < n_free_constraints; ++n) {
+    for (int n = 0; n < n_segments; ++n) {
+      // Calculate cost with lower segment time
+      segment_times_smaller = segment_times;
+      segment_times_smaller[n] -= increment_time;
 
-        increment[k].setZero();
-        increment[k][n] = increment_dist;
+      // Update the segment times. This changes the polynomial coefficients.
+      data->poly_opt_.updateSegmentTimes(segment_times_smaller);
 
-        for (int k2 = 0; k2 < dim; ++k2) {
-          free_constraints_left[k2] = free_constraints[k2] - increment[k2];
-        }
-        data->poly_opt_.setFreeConstraints(free_constraints_left);
-        // TODO: HOW TO CALCULATE GARD PROPERLY?
-        segment_times.clear();
-        data->poly_opt_.getSegmentTimes(&segment_times);
-        double total_time = computeTotalTrajectoryTime(segment_times);
-        double cost_left = total_time * total_time *
-                data->optimization_parameters_.time_penalty;
+      // Calculate cost and gradient with new segment time
+      std::vector<Eigen::VectorXd> grad_d_smaller, grad_c_smaller;
+      double J_d_smaller = data->getCostAndGradientDerivative(
+              &grad_d_smaller, data);
+      double J_c_smaller = data->getCostAndGradientCollision(
+              &grad_c_smaller, data);
+      double cost_left = w_d * J_d_smaller + w_c * J_c_smaller;
 
-        for (int k2 = 0; k2 < dim; ++k2) {
-          free_constraints_right[k2] = free_constraints[k2] + increment[k2];
-        }
-        data->poly_opt_.setFreeConstraints(free_constraints_right);
-        segment_times.clear();
-        data->poly_opt_.getSegmentTimes(&segment_times);
-        total_time = computeTotalTrajectoryTime(segment_times);
-        double cost_right = total_time * total_time *
-                data->optimization_parameters_.time_penalty;
+      // Now the same with an increased segment time
+      // Calculate cost with higher segment time
+      segment_times_bigger = segment_times;
+      segment_times_bigger[n] += increment_time;
 
-        double grad_k_n = (cost_right - cost_left) / (2.0 * increment_dist);
-        gradients->at(k)[n] = grad_k_n;
-      }
+      // Update the segment times. This changes the polynomial coefficients.
+      data->poly_opt_.updateSegmentTimes(segment_times_bigger);
+
+      // Calculate cost and gradient with new segment time
+      std::vector<Eigen::VectorXd> grad_d_bigger, grad_c_bigger;
+      double J_d_bigger = data->getCostAndGradientDerivative(
+              &grad_d_bigger, data);
+      double J_c_bigger = data->getCostAndGradientCollision(
+              &grad_c_bigger, data);
+      double cost_right = w_d * J_d_bigger + w_c * J_c_bigger;
+
+      // Calculate the gradient
+      gradients->at(n) = (cost_right - cost_left) / (2.0 * increment_time);
     }
 
-    // Set again the original constraints from before calculating the numerical
-    // constraints
-    data->poly_opt_.setFreeConstraints(free_constraints);
+    // Set again the original segment times from before calculating the
+    // numerical gradient
+    data->poly_opt_.updateSegmentTimes(segment_times);
   }
 
-  data->poly_opt_.getSegmentTimes(&segment_times);
-  total_time = computeTotalTrajectoryTime(segment_times);
-  double J_t = total_time * total_time *
-          data->optimization_parameters_.time_penalty;
+  // Compute cost
+  double J_d = data->getCostAndGradientDerivative(NULL, data);
+  double J_c = data->getCostAndGradientCollision(NULL, data);
+  double J_t = w_d * J_d + w_c * J_c;
+
   return J_t;
 }
 

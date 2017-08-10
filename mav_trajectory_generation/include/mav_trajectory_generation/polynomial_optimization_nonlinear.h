@@ -437,7 +437,7 @@ class PolynomialOptimizationNonLinear {
 
   // Calculate the numerical gradients and the cost of the segment times.
   static double getCostAndGradientTime(
-          std::vector<Eigen::VectorXd>* gradients, void* opt_data);
+          std::vector<double>* gradients, void* opt_data);
 
   // Calculate the numerical gradients and the cost of the soft constraints.
   static double getCostAndGradientSoftConstraints(
