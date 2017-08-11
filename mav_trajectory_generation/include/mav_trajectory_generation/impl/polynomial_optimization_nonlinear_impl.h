@@ -1781,6 +1781,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
   // Weighting terms for different costs
   double w_d = data->optimization_parameters_.weights.w_d;
   double w_c = data->optimization_parameters_.weights.w_c;
+  double w_t = data->optimization_parameters_.weights.w_t;
 
   std::vector<double> segment_times;
   if (gradients != NULL) {
@@ -1800,12 +1801,15 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
     segment_times_bigger.resize(n_segments);
 
     // TODO: parameterize
+    // TODO: check if segement times are bigger than 0.1; else ?
     double increment_time = 0.1; // [s]
 
     for (int n = 0; n < n_segments; ++n) {
       // Calculate cost with lower segment time
       segment_times_smaller = segment_times;
-      segment_times_smaller[n] -= increment_time;
+//      segment_times_smaller[n] -= increment_time;
+      segment_times_smaller[n] = segment_times_smaller[n] <= 0.1 ?
+                                0.1 : segment_times_smaller[n] - increment_time;
 
       // Update the segment times. This changes the polynomial coefficients.
       data->poly_opt_.updateSegmentTimes(segment_times_smaller);
@@ -1816,12 +1820,19 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
               &grad_d_smaller, data);
       double J_c_smaller = data->getCostAndGradientCollision(
               &grad_c_smaller, data);
-      double cost_left = w_d * J_d_smaller + w_c * J_c_smaller;
+      double total_time_left =
+              computeTotalTrajectoryTime(segment_times_smaller);
+      double J_t_smaller = total_time_left * total_time_left *
+              data->optimization_parameters_.time_penalty;
+      double cost_left =
+              w_d * J_d_smaller + w_c * J_c_smaller + w_t * J_t_smaller;
 
       // Now the same with an increased segment time
       // Calculate cost with higher segment time
       segment_times_bigger = segment_times;
-      segment_times_bigger[n] += increment_time;
+//      segment_times_bigger[n] += increment_time;
+      segment_times_bigger[n] = segment_times_bigger[n] <= 0.1 ?
+                                0.1 : segment_times_bigger[n] + increment_time;
 
       // Update the segment times. This changes the polynomial coefficients.
       data->poly_opt_.updateSegmentTimes(segment_times_bigger);
@@ -1832,7 +1843,12 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
               &grad_d_bigger, data);
       double J_c_bigger = data->getCostAndGradientCollision(
               &grad_c_bigger, data);
-      double cost_right = w_d * J_d_bigger + w_c * J_c_bigger;
+      double total_time_right =
+              computeTotalTrajectoryTime(segment_times_bigger);
+      double J_t_bigger = total_time_right * total_time_right *
+              data->optimization_parameters_.time_penalty;
+      double cost_right =
+              w_d * J_d_bigger + w_c * J_c_bigger + w_t * J_t_bigger;
 
       // Calculate the gradient
       gradients->at(n) = (cost_right - cost_left) / (2.0 * increment_time);
@@ -1846,9 +1862,12 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
   // Compute cost
   double J_d = data->getCostAndGradientDerivative(NULL, data);
   double J_c = data->getCostAndGradientCollision(NULL, data);
-  double J_t = w_d * J_d + w_c * J_c;
+  double total_time = computeTotalTrajectoryTime(segment_times);
+  double J_t = total_time * total_time *
+          data->optimization_parameters_.time_penalty;
+  double cost_time = w_d * J_d + w_c * J_c + w_t * J_t;
 
-  return J_t;
+  return cost_time;
 }
 
 template <int _N>
