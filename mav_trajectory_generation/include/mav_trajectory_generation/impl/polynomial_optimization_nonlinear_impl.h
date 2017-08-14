@@ -1290,7 +1290,6 @@ double PolynomialOptimizationNonLinear<_N
   optimization_data->optimization_info_.cost_soft_constraints =
           cost_constraints;
 
-  // TODO: gradient size = n_segments + 3*n_free_constraints
   if (!gradient.empty()) {
     gradient.clear();
     gradient.resize(n_segments + 3*n_free_constraints);
@@ -1782,18 +1781,18 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
   double w_d = data->optimization_parameters_.weights.w_d;
   double w_c = data->optimization_parameters_.weights.w_c;
   double w_t = data->optimization_parameters_.weights.w_t;
+  double w_sc = data->optimization_parameters_.weights.w_sc;
 
+  // Retrieve the current segment times
   std::vector<double> segment_times;
+  data->poly_opt_.getSegmentTimes(&segment_times);
+
   if (gradients != NULL) {
 
     const size_t n_segments = data->poly_opt_.getNumberSegments();
 
     gradients->clear();
     gradients->resize(n_segments);
-
-    // Retrieve the current segment times
-    std::vector<double> segment_times;
-    data->poly_opt_.getSegmentTimes(&segment_times);
 
     // Initialize changed segment times for numerical derivative
     std::vector<double> segment_times_smaller, segment_times_bigger;
