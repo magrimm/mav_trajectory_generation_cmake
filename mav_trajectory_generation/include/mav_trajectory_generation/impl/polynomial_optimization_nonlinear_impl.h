@@ -1867,17 +1867,29 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
     // Set again the original segment times from before calculating the
     // numerical gradient
     data->poly_opt_.updateSegmentTimes(segment_times);
+
+    // Compute cost
+    double J_d = data->getCostAndGradientDerivative(NULL, data);
+    double J_c = data->getCostAndGradientCollision(NULL, data);
+    double J_sc = 0.0;
+    if (data->optimization_parameters_.use_soft_constraints) {
+      J_sc = data->getCostAndGradientSoftConstraints(NULL, data);
+    }
+    double total_time = computeTotalTrajectoryTime(segment_times);
+    double J_t = total_time * total_time *
+            data->optimization_parameters_.time_penalty;
+    double cost_time = w_d * J_d + w_c * J_c + w_sc * J_sc + w_t * J_t;
+
+    return cost_time;
+
+  } else {
+    // Compute cost without gradient (only time)
+    double total_time = computeTotalTrajectoryTime(segment_times);
+    double J_t = total_time * total_time *
+            data->optimization_parameters_.time_penalty;
+
+    return J_t;
   }
-
-  // Compute cost
-  double J_d = data->getCostAndGradientDerivative(NULL, data);
-  double J_c = data->getCostAndGradientCollision(NULL, data);
-  double total_time = computeTotalTrajectoryTime(segment_times);
-  double J_t = total_time * total_time *
-          data->optimization_parameters_.time_penalty;
-  double cost_time = w_d * J_d + w_c * J_c + w_t * J_t;
-
-  return cost_time;
 }
 
 template <int _N>
