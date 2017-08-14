@@ -1814,17 +1814,23 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
       data->poly_opt_.updateSegmentTimes(segment_times_smaller);
 
       // Calculate cost and gradient with new segment time
-      std::vector<Eigen::VectorXd> grad_d_smaller, grad_c_smaller;
+      std::vector<Eigen::VectorXd> grad_d_smaller, grad_c_smaller,
+              grad_sc_smaller;
       double J_d_smaller = data->getCostAndGradientDerivative(
               &grad_d_smaller, data);
       double J_c_smaller = data->getCostAndGradientCollision(
               &grad_c_smaller, data);
+      double J_sc_smaller = 0.0;
+      if (data->optimization_parameters_.use_soft_constraints) {
+        J_sc_smaller = data->getCostAndGradientSoftConstraints(
+                &grad_sc_smaller, data);
+      }
       double total_time_left =
               computeTotalTrajectoryTime(segment_times_smaller);
       double J_t_smaller = total_time_left * total_time_left *
               data->optimization_parameters_.time_penalty;
-      double cost_left =
-              w_d * J_d_smaller + w_c * J_c_smaller + w_t * J_t_smaller;
+      double cost_left = w_d * J_d_smaller + w_c * J_c_smaller
+                         + w_sc * J_sc_smaller + w_t * J_t_smaller;
 
       // Now the same with an increased segment time
       // Calculate cost with higher segment time
@@ -1837,17 +1843,22 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
       data->poly_opt_.updateSegmentTimes(segment_times_bigger);
 
       // Calculate cost and gradient with new segment time
-      std::vector<Eigen::VectorXd> grad_d_bigger, grad_c_bigger;
+      std::vector<Eigen::VectorXd> grad_d_bigger, grad_c_bigger, grad_sc_bigger;
       double J_d_bigger = data->getCostAndGradientDerivative(
               &grad_d_bigger, data);
       double J_c_bigger = data->getCostAndGradientCollision(
               &grad_c_bigger, data);
+      double J_sc_bigger = 0.0;
+      if (data->optimization_parameters_.use_soft_constraints) {
+        J_sc_bigger = data->getCostAndGradientSoftConstraints(
+                &grad_sc_bigger, data);
+      }
       double total_time_right =
               computeTotalTrajectoryTime(segment_times_bigger);
       double J_t_bigger = total_time_right * total_time_right *
               data->optimization_parameters_.time_penalty;
-      double cost_right =
-              w_d * J_d_bigger + w_c * J_c_bigger + w_t * J_t_bigger;
+      double cost_right = w_d * J_d_bigger + w_c * J_c_bigger
+                          + w_sc * J_sc_bigger + w_t * J_t_bigger;
 
       // Calculate the gradient
       gradients->at(n) = (cost_right - cost_left) / (2.0 * increment_time);
