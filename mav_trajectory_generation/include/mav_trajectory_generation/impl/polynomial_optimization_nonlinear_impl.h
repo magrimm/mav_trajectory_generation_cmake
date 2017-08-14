@@ -49,8 +49,7 @@ PolynomialOptimizationNonLinear<_N>::PolynomialOptimizationNonLinear(
     : poly_opt_(dimension),
       dimension_(dimension),
       derivative_to_optimize_(derivative_order::INVALID),
-      optimization_parameters_(parameters),
-      solve_with_position_constraint_(false) {}
+      optimization_parameters_(parameters) {}
 
 template <int _N>
 bool PolynomialOptimizationNonLinear<_N>::setupFromVertices(
@@ -364,12 +363,7 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraints() {
 template <int _N>
 int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
   // compute initial solution
-  solve_with_position_constraint_ = false;
-  if (solve_with_position_constraint_) {
-    poly_opt_.solveLinear();
-  } else {
-    computeInitialSolutionWithoutPositionConstraints();
-  }
+  computeInitialSolutionWithoutPositionConstraints();
 
   // Save the trajectory from the initial guess/solution
   trajectory_initial_after_removing_pos_.clear();
@@ -428,9 +422,6 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
   if (optimization_parameters_.set_bounds_with_constraints) {
     LOG(INFO) << "USE HARD CONSTRAINTS FOR ENDPOINT DERIVATIVE BOUNDARIES";
 
-//    lower_bounds = std::vector<double>(n_optmization_variables, -HUGE_VAL);
-//    upper_bounds = std::vector<double>(n_optmization_variables, HUGE_VAL);
-
     for (double x : initial_solution) {
       const double abs_x = std::abs(x);
       lower_bounds.push_back(-abs_x * multiplier);
@@ -477,15 +468,17 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
                            abs_x);
   }
 
-  std::cout << "NLOPT X BOUNDS: LOWER | UPPER || INITIAL SOL || INITIAL STEP"
-            << std::endl;
-  for (int j = 0; j < lower_bounds.size(); ++j) {
-    std::cout << j << ": " << lower_bounds[j] << " | "
-              << upper_bounds[j] << " || "
-              << initial_solution[j] << " || "
-              << initial_step[j] << std::endl;
+  if (optimization_data->optimization_parameters_.print_debug_info) {
+    std::cout << "NLOPT X BOUNDS: LOWER | UPPER || INITIAL SOL || INITIAL STEP"
+              << std::endl;
+    for (int j = 0; j < lower_bounds.size(); ++j) {
+      std::cout << j << ": " << lower_bounds[j] << " | "
+                << upper_bounds[j] << " || "
+                << initial_solution[j] << " || "
+                << initial_step[j] << std::endl;
+    }
+    std::cout << std::endl;
   }
-  std::cout << std::endl;
 
   try {
     nlopt_->set_initial_step(initial_step);
@@ -867,15 +860,6 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
   optimization_data->poly_opt_.setFreeConstraints(free_constraints);
 
   if (optimization_data->optimization_parameters_.print_debug_info) {
-//    std::cout << "4 FREE CONSTRAINTS" << std::endl;
-//    for (int i = 0; i < free_constraints[0].size(); ++i) {
-//      std::cout << i << ": " << free_constraints[0][i] << " | "
-//                << free_constraints[1][i] << " | "
-//                << free_constraints[2][i]
-//                << std::endl;
-//    }
-//    std::cout << std::endl;
-
     std::cout << "LOWER BOUNDS -- FREE CONSTRAINTS -- UPPER BOUNDS" << std::endl;
     for (size_t d = 0; d < dim; ++d) {
       for (int i = 0; i < free_constraints[0].size(); ++i) {
@@ -1004,7 +988,6 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientDerivative(
 
   // Compare the two approaches:
   // getCost() and the full matrix.
-//  const size_t n_segments = data->poly_opt_.getNumberSegments();
   const size_t n_free_constraints = data->poly_opt_.getNumberFreeConstraints();
   const size_t n_fixed_constraints = data->poly_opt_.getNumberFixedConstraints();
   const size_t dim = data->poly_opt_.getDimension();
@@ -1078,8 +1061,6 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
   PolynomialOptimizationNonLinear<N>* data =
           static_cast<PolynomialOptimizationNonLinear<N>*>(opt_data);
 
-  // Compare the two approaches:
-  // getCost() and the full matrix.
   const size_t n_segments = data->poly_opt_.getNumberSegments();
   const size_t n_free_constraints = data->poly_opt_.getNumberFreeConstraints();
   const size_t n_fixed_constraints = data->poly_opt_.getNumberFixedConstraints();
@@ -1115,7 +1096,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
                          data->L_.rows(), n_free_constraints);
 
   double dt = 0.1; // TODO: parameterize
-  double dist_sum_limit = 0.05; // TODO: parameterize map resolution
+  double dist_sum_limit = data->optimization_parameters_.map_resolution;
 
   Eigen::VectorXd prev_pos(dim);
   prev_pos.setZero();
@@ -1263,6 +1244,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
   // Get potential cost from distance to collision
   double J_c_esdf = data->getCostPotential(distance);
 
+  // TODO: ONLY DEBUG
   if (position[0] < -10.45 || position[0] > 2.35 || position[1] < -8.35 ||
       position[1] > 5.65 || position[2] < -1.30 || position[2] > 3.4) {
     std::cout << "position: " << position[0] << " | "
@@ -1291,6 +1273,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
       grad_c_potential[k] += (right_cost - left_cost) / (2.0 * increment_dist);
     }
 
+    // TODO: ONLY DEBUG
     if (position[0] < -10.45 || position[0] > 2.35 || position[1] < -8.35 ||
         position[1] > 5.65 || position[2] < -1.30 || position[2] > 3.4) {
       if (data->optimization_parameters_.is_potential) {

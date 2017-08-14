@@ -500,10 +500,6 @@ class PolynomialOptimizationNonLinear {
   // Signed Distance Field needed for optimizing the collision potential
   std::shared_ptr<sdf_tools::SignedDistanceField> sdf_;
 
-  // Do we solve with or without position constraints for the vertices
-  // betwenn start and goal?
-  bool solve_with_position_constraint_;
-
   // Linear solution / Initial guess
   Trajectory trajectory_initial_;
   Trajectory trajectory_initial_after_removing_pos_;
