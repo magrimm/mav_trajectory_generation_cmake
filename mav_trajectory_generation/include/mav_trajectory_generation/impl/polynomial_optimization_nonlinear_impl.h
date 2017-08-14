@@ -1868,6 +1868,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
     // numerical gradient
     data->poly_opt_.updateSegmentTimes(segment_times);
 
+    // TODO: replace J_d, J_c and J_sc with already calculated values before
     // Compute cost
     double J_d = data->getCostAndGradientDerivative(NULL, data);
     double J_c = data->getCostAndGradientCollision(NULL, data);
