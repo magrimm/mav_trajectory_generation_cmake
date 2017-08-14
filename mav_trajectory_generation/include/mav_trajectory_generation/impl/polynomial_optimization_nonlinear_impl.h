@@ -1880,6 +1880,18 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
             data->optimization_parameters_.time_penalty;
     double cost_time = w_d * J_d + w_c * J_c + w_sc * J_sc + w_t * J_t;
 
+    if (data->optimization_parameters_.print_debug_info) {
+      std::cout << "---- TIME cost at iteration "
+                << data->optimization_info_.n_iterations << "---- "
+                << std::endl;
+      std::cout << "  trajectory: " <<  w_d * J_d << std::endl;
+      std::cout << "  collision: " << w_c * J_c << std::endl;
+      std::cout << "  constraints: " << w_sc * J_sc << std::endl;
+      std::cout << "  time: " << w_t * J_t << std::endl;
+      std::cout << "  sum TIME: " << w_d * J_d + w_c * J_c + w_sc * J_sc +
+              w_t * J_t << std::endl;
+    }
+
     return cost_time;
 
   } else {
