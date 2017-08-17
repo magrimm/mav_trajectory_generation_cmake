@@ -1645,6 +1645,25 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
 }
 
 template <int _N>
+std::vector<std::pair<float, bool>> PolynomialOptimizationNonLinear<_N>::
+getNeighborsSDF(const std::vector<int64_t>& idx,
+                const std::shared_ptr<sdf_tools::SignedDistanceField>& sdf) {
+  std::vector<std::pair<float, bool>> q;
+
+  // Get distances of 8 corner neighbors
+  q.push_back(sdf->GetSafe(idx[0]-1, idx[1]-1, idx[2]-1)); // q000
+  q.push_back(sdf->GetSafe(idx[0]-1, idx[1]-1, idx[2]+1)); // q001
+  q.push_back(sdf->GetSafe(idx[0]-1, idx[1]+1, idx[2]-1)); // q010
+  q.push_back(sdf->GetSafe(idx[0]-1, idx[1]+1, idx[2]+1)); // q011
+  q.push_back(sdf->GetSafe(idx[0]+1, idx[1]-1, idx[2]-1)); // q100
+  q.push_back(sdf->GetSafe(idx[0]+1, idx[1]-1, idx[2]+1)); // q101
+  q.push_back(sdf->GetSafe(idx[0]+1, idx[1]+1, idx[2]-1)); // q110
+  q.push_back(sdf->GetSafe(idx[0]+1, idx[1]+1, idx[2]+1)); // q111
+
+  return q;
+}
+
+template <int _N>
 void PolynomialOptimizationNonLinear<_N>::getNumericalGradientsCollision(
         std::vector<Eigen::VectorXd>* gradients_num, void* opt_data) {
   CHECK_NOTNULL(opt_data);
