@@ -541,6 +541,9 @@ class PolynomialOptimizationNonLinear {
   // [0 0 0 0 4 ...]            -->     f_k(t) = T * p_k
   // [  ...   ...  ]            --> df_k(t)/dt = T * V * p_k
   Eigen::MatrixXd V_;
+  Eigen::MatrixXd Acc_;
+  Eigen::MatrixXd Jerk_;
+  Eigen::MatrixXd Snap_;
   Eigen::MatrixXd V_all_segments_;
 
   // Signed Distance Field needed for optimizing the collision potential

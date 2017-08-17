@@ -646,6 +646,24 @@ int PolynomialOptimizationNonLinear<_N
   }
   V_ = V_all_segments_.block(0, 0, N, N);
 
+  Acc_.resize(N, N);
+  Acc_.setZero();
+  for (int i = 0; i < Acc_.diagonal(2).size(); ++i) {
+    Acc_.diagonal(2)(i) = (i + 1)*(i + 2);
+  }
+
+  Jerk_.resize(N, N);
+  Jerk_.setZero();
+  for (int i = 0; i < Jerk_.diagonal(3).size(); ++i) {
+    Jerk_.diagonal(3)(i) = (i + 1)*(i + 2)*(i + 3);
+  }
+
+  Snap_.resize(N, N);
+  Snap_.setZero();
+  for (int i = 0; i < Snap_.diagonal(4).size(); ++i) {
+    Snap_.diagonal(4)(i) = (i + 1)*(i + 2)*(i + 3)*(i + 4);
+  }
+
   // copy all constraints into one vector:
   for (double t : segment_times) {
     initial_solution.push_back(t);
