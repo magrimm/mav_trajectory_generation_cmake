@@ -2099,6 +2099,106 @@ double PolynomialOptimizationNonLinear<_N>::triLerp(
   return lerp(z, z1, z2, r0, r1);
 }
 
+template <int _N>
+void PolynomialOptimizationNonLinear<_N>::printMatlabSampledTrajectory(
+        const std::string& file) const {
+
+  const int n_fixed = poly_opt_.getNumberFixedConstraints();
+  const int n_free = poly_opt_.getNumberFreeConstraints();
+
+  // Allocate some size of p vector.
+  double dt = 0.01;
+
+  std::vector<double> segment_times;
+  poly_opt_.getSegmentTimes(&segment_times);
+
+  int num_segments = poly_opt_.getNumberSegments();
+  int total_samples = 0;
+  for (int i = 0; i < num_segments; ++i) {
+    total_samples += static_cast<int>(std::ceil(segment_times[i] / dt)) + 1;
+  }
+
+  std::vector<Eigen::VectorXd> d_p_vec;
+  std::vector<Eigen::VectorXd> d_f_vec;
+  poly_opt_.getFreeConstraints(&d_p_vec);
+  poly_opt_.getFixedConstraints(&d_f_vec);
+
+  std::vector<Eigen::VectorXd> p_vec(dimension_,
+                                     Eigen::VectorXd::Zero(N * num_segments));
+  for (int k = 0; k < dimension_; ++k) {
+    Eigen::VectorXd d_all(n_fixed + n_free);
+    d_all.head(n_fixed) = d_f_vec[k];
+    d_all.tail(n_free) = d_p_vec[k];
+
+    // Get the coefficients out.
+    // L is shorthand for A_inv * M.
+    p_vec[k] = L_ * d_all;
+  }
+
+  // Layout: [t, x, y, z...]
+//  Eigen::MatrixXd output(total_samples, dimension_ + 1);
+//  Eigen::MatrixXd output(total_samples, 2*dimension_ + 1);
+//  Eigen::MatrixXd output(total_samples, 3*dimension_ + 1);
+//  Eigen::MatrixXd output(total_samples, 4*dimension_ + 1);
+  Eigen::MatrixXd output(total_samples, 5*dimension_ + 1);
+  output.setZero();
+  int j = 0;
+
+  double t = 0.0;
+  double current_segment_time = 0.0;
+  for (int i = 0; i < num_segments; ++i) {
+    // Select a time.
+    for (t = 0.0; t < segment_times[i]; t += dt) {
+      // T is the vector for just THIS SEGMENT.
+      Eigen::VectorXd T_seg; // Is supposed to be a column-vector
+      T_seg.resize(N);
+      for (int n = 0; n < N; ++n) {
+        T_seg[n] = pow(t, n);
+      }
+
+      // Calculate the position per axis. Also calculate velocity so we don't
+      // have to get p_k_i out again.
+      Eigen::VectorXd position(dimension_);
+      Eigen::VectorXd velocity(dimension_);
+      Eigen::VectorXd acceleration(dimension_);
+      Eigen::VectorXd jerk(dimension_);
+      Eigen::VectorXd snap(dimension_);
+      position.setZero();
+      velocity.setZero();
+      acceleration.setZero();
+      jerk.setZero();
+      snap.setZero();
+      for (int k = 0; k < dimension_; ++k) {
+        // Get the coefficients just for this segment.
+        Eigen::Block<Eigen::VectorXd> p_k_i = p_vec[k].block(i * N, 0, N, 1);
+        position(k) = (T_seg.transpose() * p_k_i)(0);
+        velocity(k) = (T_seg.transpose() * V_ * p_k_i)(0);
+        acceleration(k) = (T_seg.transpose() * Acc_ * p_k_i)(0);
+        jerk(k) = (T_seg.transpose() * Jerk_ * p_k_i)(0);
+        snap(k) = (T_seg.transpose() * Snap_ * p_k_i)(0);
+      }
+      if (j < output.rows()) {
+        output(j, 0) = t + current_segment_time;
+        output.row(j).segment(1, dimension_) = position.transpose();
+        output.row(j).segment(1+dimension_, dimension_) = velocity.transpose();
+        output.row(j).segment(1+2*dimension_, dimension_) =
+                acceleration.transpose();
+        output.row(j).segment(1+3*dimension_, dimension_) =
+                jerk.transpose();
+        output.row(j).segment(1+4*dimension_, dimension_) =
+                snap.transpose();
+        j++;
+      }
+    }
+    current_segment_time += segment_times[i];
+  }
+
+  std::fstream fs;
+  fs.open(file, std::fstream::out);
+  fs << output;
+  fs.close();
+}
+
 }  // namespace mav_trajectory_generation
 
 namespace nlopt {

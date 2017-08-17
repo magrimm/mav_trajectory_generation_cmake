@@ -24,6 +24,7 @@
 #include <memory>
 #include <nlopt.hpp>
 #include <sdf_tools/sdf.hpp>
+#include <fstream>
 
 #include "mav_trajectory_generation/polynomial_optimization_linear.h"
 
@@ -322,6 +323,8 @@ class PolynomialOptimizationNonLinear {
   // L the new remapping matrix
   // 7) Set the new free endpoint-derivatives d_p back in the linear solver.
   bool computeInitialSolutionWithoutPositionConstraints();
+
+  void printMatlabSampledTrajectory(const std::string& file) const;
 
  private:
   // Holds the data for constraint evaluation, since these methods are
