@@ -504,6 +504,9 @@ class PolynomialOptimizationNonLinear {
   std::vector<std::pair<float, bool>> getNeighborsSDF(
           const std::vector<int64_t>& idx,
           const std::shared_ptr<sdf_tools::SignedDistanceField>& sdf);
+  double getDistanceSDF(const Eigen::Vector3d& position,
+                       const std::shared_ptr<sdf_tools::SignedDistanceField>& sdf);
+
   // nlopt optimization object.
   std::shared_ptr<nlopt::opt> nlopt_;
 

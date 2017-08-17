@@ -1664,6 +1664,46 @@ getNeighborsSDF(const std::vector<int64_t>& idx,
 }
 
 template <int _N>
+double PolynomialOptimizationNonLinear<_N>::getDistanceSDF(
+        const Eigen::Vector3d& position,
+        const std::shared_ptr<sdf_tools::SignedDistanceField>& sdf) {
+
+  // Convert location to grid index
+  std::vector<int64_t> idx = sdf->LocationToGridIndex3d(position);
+  // Retrieve all neighbouring grid cells
+  std::vector<std::pair<float, bool>> q_xyz = getNeighborsSDF(idx, sdf);
+
+  // Check if all neighbors are valid nodes (inside bounds)
+  bool is_valid = true;
+  for (const auto& q : q_xyz) {
+    if (!q.second){
+      is_valid = false;
+      break;
+    }
+  }
+
+  double distance = 0.0;
+  if (!is_valid) {
+    distance = sdf->Get(position[0], position[1], position[2]);
+    std::cout << "NOT VALID DIST: " << distance << std::endl;
+  } else {
+    // Get positions x0, x1, y0, y1, z0, z1
+    std::vector<double> x0y0z0 =
+            sdf->GridIndexToLocation(idx[0]-1, idx[1]-1, idx[2]-1);
+    std::vector<double> x1y1z1 =
+            sdf->GridIndexToLocation(idx[0]+1, idx[1]+1, idx[2]+1);
+
+    distance = triLerp(
+            position[0], position[1], position[2],
+            q_xyz[0].first, q_xyz[1].first, q_xyz[2].first, q_xyz[3].first,
+            q_xyz[4].first, q_xyz[5].first, q_xyz[6].first, q_xyz[7].first,
+            x0y0z0[0], x1y1z1[0], x0y0z0[1], x1y1z1[1], x0y0z0[2], x1y1z1[2]);
+  }
+
+  return distance;
+}
+
+template <int _N>
 void PolynomialOptimizationNonLinear<_N>::getNumericalGradientsCollision(
         std::vector<Eigen::VectorXd>* gradients_num, void* opt_data) {
   CHECK_NOTNULL(opt_data);
