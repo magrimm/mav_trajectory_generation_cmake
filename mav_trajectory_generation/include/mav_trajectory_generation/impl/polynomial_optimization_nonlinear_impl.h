@@ -1577,67 +1577,72 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
   PolynomialOptimizationNonLinear<N>* data =
           static_cast<PolynomialOptimizationNonLinear<N>*>(opt_data);
 
+  Eigen::Vector3d min_bound = data->optimization_parameters_.min_bound;
+  Eigen::Vector3d max_bound = data->optimization_parameters_.max_bound;
+
+  // TODO: if this still needed?
+  // TODO: How to make sure trajectory stays within bounds?
+  bool is_valid_state = true;
+  double increment_dist = data->optimization_parameters_.map_resolution;
+  if (position[0] < min_bound[0]+increment_dist ||
+          position[0] > max_bound[0]-increment_dist ||
+          position[1] < min_bound[1]+increment_dist ||
+          position[1] > max_bound[1]-increment_dist ||
+          position[2] < min_bound[2]+increment_dist ||
+          position[2] > max_bound[2]-increment_dist) {
+    is_valid_state = false;
+  }
+
   // Get distance from collision at current position
-  double distance = data->sdf_->Get(position[0], position[1], position[2]);
+  double distance = 0.0;
+  if (is_valid_state && data->optimization_parameters_.use_continous_distance) {
+    distance = data->getDistanceSDF(position, data->sdf_);
+  } else {
+    distance = data->sdf_->Get(position[0], position[1], position[2]);
+  }
 
   // Get potential cost from distance to collision
   double J_c_esdf = data->getCostPotential(distance);
 
-  if (position[0] < -10.45 || position[0] > 2.35 || position[1] < -8.35 ||
-      position[1] > 5.65 || position[2] < -1.30 || position[2] > 3.4) {
-    std::cout << "position: " << position[0] << " | "
-              << position[1] << " | " << position[2]
-              << " || distance: " << distance
-              << " | J_c_esdf: " << J_c_esdf << std::endl;
-  }
-
   if (gradient != NULL) {
-    std::vector<double> grad_c_esdf = data->sdf_->GetGradient3d(position, true);
-
     // Numerical gradients
-    std::vector<double> grad_c_potential(data->dimension_);
-    double increment_dist = data->optimization_parameters_.map_resolution;
+    Eigen::VectorXd grad_c_potential(data->dimension_);
     Eigen::VectorXd increment(data->dimension_);
     for (int k = 0; k < data->dimension_; ++k) {
       increment.setZero();
       increment[k] = increment_dist;
 
       // Get distance and potential cost from collision at current position
-      double left_dist = data->sdf_->Get3d(position-increment);
+      double left_dist, right_dist;
+      if (is_valid_state &&
+              data->optimization_parameters_.use_continous_distance) {
+        left_dist = data->getDistanceSDF(position-increment, data->sdf_);
+        right_dist = data->getDistanceSDF(position+increment, data->sdf_);
+      } else { // Discretized uniform grid
+        left_dist = data->sdf_->Get3d(position-increment);
+        right_dist = data->sdf_->Get3d(position+increment);
+      }
+
       double left_cost = data->getCostPotential(left_dist);
-      double right_dist = data->sdf_->Get3d(position+increment);
       double right_cost = data->getCostPotential(right_dist);
 
       grad_c_potential[k] += (right_cost - left_cost) / (2.0 * increment_dist);
     }
 
-    if (position[0] < -10.45 || position[0] > 2.35 || position[1] < -8.35 ||
-        position[1] > 5.65 || position[2] < -1.30 || position[2] > 3.4) {
-      if (data->optimization_parameters_.is_potential) {
-        std::cout << "grad_c_potential: ";
-        for (int i = 0; i < grad_c_potential.size(); ++i) {
-          std::cout << grad_c_potential[i] << " | ";
-        }
-        std::cout << std::endl;
+    (*gradient) = grad_c_potential;
+
+    // TODO: ONLY DEBUG
+    if (!is_valid_state) {
+      std::cout << "position: " << position[0] << " | "
+                << position[1] << " | " << position[2]
+                << " || distance: " << distance
+                << " | J_c_esdf: " << J_c_esdf << std::endl;
+
+      std::cout << "grad_c_potential: ";
+      for (int i = 0; i < grad_c_potential.size(); ++i) {
+        std::cout << grad_c_potential[i] << " | ";
       }
-    }
-
-    // TODO: GET RID --> only debug (adjust opti param boundaries lower_ upper_)
-    // TODO: BUGGGGGGG
-    if (grad_c_potential.empty()) {
-      std::cout << "GRAD EMPTY --> SET ZERO" << std::endl;
-      grad_c_potential = std::vector<double>(3, 0.0);
-      grad_c_esdf = std::vector<double>(3, 0.0);
-    }
-
-    if (data->optimization_parameters_.is_potential) {
-      (*gradient)[0] = grad_c_potential[0];
-      (*gradient)[1] = grad_c_potential[1];
-      (*gradient)[2] = grad_c_potential[2];
-    } else {
-      (*gradient)[0] = -grad_c_esdf[0];
-      (*gradient)[1] = -grad_c_esdf[1];
-      (*gradient)[2] = -grad_c_esdf[2];
+      std::cout << std::endl;
     }
   }
 

@@ -61,8 +61,8 @@ struct NonlinearOptimizationParameters {
         min_bound(Eigen::Vector3d::Zero()),
         max_bound(Eigen::Vector3d::Zero()),
         use_numeric_grad(false),
+        use_continous_distance(false),
         set_bounds_with_constraints(false),
-        is_potential(true),
         epsilon(0.5),
         robot_radius(0.5),
         coll_pot_multiplier(1.0) {}
@@ -162,13 +162,11 @@ struct NonlinearOptimizationParameters {
 
   // Use numerical gradients
   bool use_numeric_grad;
+  bool use_continous_distance;
 
   // Set the bounds of the optimization parameters with the constraints given
   // (map-->position, v_max, a_max)
   bool set_bounds_with_constraints;
-
-  // TODO: Debug only
-  bool is_potential;
 
   double epsilon; // Obstacle clearance
   double robot_radius; // bounding box sphere radius
