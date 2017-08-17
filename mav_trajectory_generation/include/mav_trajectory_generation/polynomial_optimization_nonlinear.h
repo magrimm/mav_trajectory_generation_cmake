@@ -492,6 +492,14 @@ class PolynomialOptimizationNonLinear {
   static double computeTotalTrajectoryTime(
       const std::vector<double>& segment_times);
 
+
+  double lerp(double x, double x1, double x2, double q00, double q01);
+  double biLerp(double x, double y, double q11, double q12, double q21,
+                double q22, double x1, double x2, double y1, double y2);
+  double triLerp(double x, double y, double z, double q000, double q001,
+                 double q010, double q011, double q100, double q101,
+                 double q110, double q111, double x1, double x2, double y1,
+                 double y2, double z1, double z2);
   // nlopt optimization object.
   std::shared_ptr<nlopt::opt> nlopt_;
 
