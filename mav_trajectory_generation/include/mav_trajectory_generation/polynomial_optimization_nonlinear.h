@@ -62,6 +62,7 @@ struct NonlinearOptimizationParameters {
         max_bound(Eigen::Vector3d::Zero()),
         use_numeric_grad(false),
         use_continous_distance(false),
+        increment_time(0.1),
         set_bounds_with_constraints(false),
         epsilon(0.5),
         robot_radius(0.5),
@@ -163,6 +164,7 @@ struct NonlinearOptimizationParameters {
   // Use numerical gradients
   bool use_numeric_grad;
   bool use_continous_distance;
+  double increment_time;
 
   // Set the bounds of the optimization parameters with the constraints given
   // (map-->position, v_max, a_max)

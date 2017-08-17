@@ -1866,7 +1866,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
 
     // TODO: parameterize
     // TODO: check if segement times are bigger than 0.1; else ?
-    double increment_time = 0.1; // [s]
+    double increment_time = data->optimization_parameters_.increment_time; //[s]
 
     for (int n = 0; n < n_segments; ++n) {
       // Calculate cost with lower segment time
