@@ -1173,14 +1173,6 @@ double PolynomialOptimizationNonLinear<_N
   optimization_data->poly_opt_.updateSegmentTimes(segment_times);
   optimization_data->poly_opt_.setFreeConstraints(free_constraints);
 
-  std::cout << "SEGMENT TIMES" << std::endl;
-  for (int j = 0; j < segment_times.size(); ++j) {
-    std::cout << j << ": " << segment_times[j] << std::endl;
-  }
-  std::cout << "TOTAL TRAJ TIME: "
-            << optimization_data->computeTotalTrajectoryTime(segment_times)
-            << std::endl;
-
 //  std::cout << "FREE CONSTRAINTS" << std::endl;
 //  for (int i = 0; i < free_constraints[0].size(); ++i) {
 //    std::cout << i << ": " << free_constraints[0][i] << " | "
@@ -1276,6 +1268,15 @@ double PolynomialOptimizationNonLinear<_N
     std::cout << "  constraints: " << cost_constraints << std::endl;
     std::cout << "  sum: " << cost_trajectory + cost_collision + cost_time +
                               cost_constraints << std::endl;
+
+    std::cout << "SEGMENT TIMES" << std::endl;
+    for (int j = 0; j < segment_times.size(); ++j) {
+      std::cout << j << ": " << segment_times[j] << std::endl;
+    }
+
+    double total_time =
+            optimization_data->computeTotalTrajectoryTime(segment_times);
+    std::cout << "TOTAL TIME: " << total_time << std::endl;
   }
 
   // Save the trajectory of this iteration
