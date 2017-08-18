@@ -49,8 +49,7 @@ PolynomialOptimizationNonLinear<_N>::PolynomialOptimizationNonLinear(
     : poly_opt_(dimension),
       dimension_(dimension),
       derivative_to_optimize_(derivative_order::INVALID),
-      optimization_parameters_(parameters),
-      solve_with_position_constraint_(false) {}
+      optimization_parameters_(parameters) {}
 
 template <int _N>
 bool PolynomialOptimizationNonLinear<_N>::setupFromVertices(
@@ -350,8 +349,7 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraints() {
 template <int _N>
 int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
   // compute initial solution
-  solve_with_position_constraint_ = false;
-  if (solve_with_position_constraint_) {
+  if (optimization_parameters_.solve_with_position_constraint) {
     poly_opt_.solveLinear();
   } else {
     computeInitialSolutionWithoutPositionConstraints();
@@ -590,8 +588,7 @@ int PolynomialOptimizationNonLinear<_N
           lower_bounds, upper_bounds;
 
   // compute initial solution
-  solve_with_position_constraint_ = false;
-  if (solve_with_position_constraint_) {
+  if (optimization_parameters_.solve_with_position_constraint) {
     poly_opt_.solveLinear();
   } else {
     computeInitialSolutionWithoutPositionConstraints();

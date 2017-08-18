@@ -67,7 +67,8 @@ struct NonlinearOptimizationParameters {
         set_bounds_with_constraints(false),
         epsilon(0.5),
         robot_radius(0.5),
-        coll_pot_multiplier(1.0) {}
+        coll_pot_multiplier(1.0),
+        solve_with_position_constraint(false) {}
 
   // Stopping criteria, if objective function changes less than absolute value.
   // Disabled if negative.
@@ -175,6 +176,10 @@ struct NonlinearOptimizationParameters {
   double robot_radius; // bounding box sphere radius
 
   double coll_pot_multiplier; // Multiplier for the potential cost in collision
+
+  // Do we solve with or without position constraints for the vertices
+  // between start and goal?
+  bool solve_with_position_constraint;
 };
 
 class OptimizationInfo {
@@ -551,10 +556,6 @@ class PolynomialOptimizationNonLinear {
 
   // Signed Distance Field needed for optimizing the collision potential
   std::shared_ptr<sdf_tools::SignedDistanceField> sdf_;
-
-  // Do we solve with or without position constraints for the vertices
-  // betwenn start and goal?
-  bool solve_with_position_constraint_;
 
   // Linear solution / Initial guess
   Trajectory trajectory_initial_;
