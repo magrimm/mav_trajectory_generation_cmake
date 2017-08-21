@@ -284,6 +284,18 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraints() {
   lower_bounds.reserve(n_optmization_variables);
   upper_bounds.reserve(n_optmization_variables);
 
+  // TODO: no need to calculate twice. Calculate in comptueIntitialSol...
+  // Calculate L
+  Eigen::MatrixXd M, A_inv;
+  poly_opt_.getM(&M);
+  poly_opt_.getAInverse(&A_inv);
+
+  L_ = Eigen::MatrixXd(A_inv * M);
+
+  // Calculate matrix for mapping vector of polynomial coefficients of a
+  // function to the polynomial coefficients of its derivative.
+  calculatePolynomialDerivativeMappingMatrices();
+
   for (const Eigen::VectorXd& c : free_constraints) {
     for (int i = 0; i < c.size(); ++i) {
       initial_solution.push_back(c[i]);
@@ -365,22 +377,7 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
 
   // Calculate matrix for mapping vector of polynomial coefficients of a
   // function to the polynomial coefficients of its derivative.
-  // [0 1 0 0 0 ...]              f_k(t) = a0 + a1*t + a2*t^2 + a3*t^3 + ...
-  // [0 0 2 0 0 ...]          df_k(t)/dt =      a1   + 2*a2*t + 3*a3*t^2 + ...
-  // [0 0 0 3 0 ...]                    with T = [t^0 t^1 t^2 t^3 t^4 ...]
-  // [0 0 0 0 4 ...]            -->     f_k(t) = T * p_k
-  // [  ...   ...  ]            --> df_k(t)/dt = T * V * p_k
-  size_t n_segments = poly_opt_.getNumberSegments();
-
-  V_all_segments_.resize(n_segments * N, n_segments * N);
-  V_.resize(N, N);
-
-  V_all_segments_.setZero();
-  V_.setZero();
-  for (int i = 0; i < V_all_segments_.diagonal(1).size(); ++i) {
-    V_all_segments_.diagonal(1)(i) = (i + 1) % N;
-  }
-  V_ = V_all_segments_.block(0, 0, N, N);
+  calculatePolynomialDerivativeMappingMatrices();
 
   for (const Eigen::VectorXd& c : free_constraints) {
     for (int i = 0; i < c.size(); ++i) {
@@ -606,40 +603,7 @@ int PolynomialOptimizationNonLinear<_N
 
   // Calculate matrix for mapping vector of polynomial coefficients of a
   // function to the polynomial coefficients of its derivative.
-  // [0 1 0 0 0 ...]              f_k(t) = a0 + a1*t + a2*t^2 + a3*t^3 + ...
-  // [0 0 2 0 0 ...]          df_k(t)/dt =      a1   + 2*a2*t + 3*a3*t^2 + ...
-  // [0 0 0 3 0 ...]                    with T = [t^0 t^1 t^2 t^3 t^4 ...]
-  // [0 0 0 0 4 ...]            -->     f_k(t) = T * p_k
-  // [  ...   ...  ]            --> df_k(t)/dt = T * V * p_k
-//  size_t n_segments = poly_opt_.getNumberSegments();
-
-  V_all_segments_.resize(n_segments * N, n_segments * N);
-  V_.resize(N, N);
-
-  V_all_segments_.setZero();
-  V_.setZero();
-  for (int i = 0; i < V_all_segments_.diagonal(1).size(); ++i) {
-    V_all_segments_.diagonal(1)(i) = (i + 1) % N;
-  }
-  V_ = V_all_segments_.block(0, 0, N, N);
-
-  Acc_.resize(N, N);
-  Acc_.setZero();
-  for (int i = 0; i < Acc_.diagonal(2).size(); ++i) {
-    Acc_.diagonal(2)(i) = (i + 1)*(i + 2);
-  }
-
-  Jerk_.resize(N, N);
-  Jerk_.setZero();
-  for (int i = 0; i < Jerk_.diagonal(3).size(); ++i) {
-    Jerk_.diagonal(3)(i) = (i + 1)*(i + 2)*(i + 3);
-  }
-
-  Snap_.resize(N, N);
-  Snap_.setZero();
-  for (int i = 0; i < Snap_.diagonal(4).size(); ++i) {
-    Snap_.diagonal(4)(i) = (i + 1)*(i + 2)*(i + 3)*(i + 4);
-  }
+  calculatePolynomialDerivativeMappingMatrices();
 
   // copy all constraints into one vector:
   for (double t : segment_times) {
@@ -2075,6 +2039,47 @@ double PolynomialOptimizationNonLinear<_N>::triLerp(
   return lerp(z, z1, z2, r0, r1);
 }
 
+
+template <int _N>
+void PolynomialOptimizationNonLinear<_N>::
+calculatePolynomialDerivativeMappingMatrices() {
+  // Calculate matrix for mapping vector of polynomial coefficients of a
+  // function to the polynomial coefficients of its derivative.
+  // [0 1 0 0 0 ...]              f_k(t) = a0 + a1*t + a2*t^2 + a3*t^3 + ...
+  // [0 0 2 0 0 ...]          df_k(t)/dt =      a1   + 2*a2*t + 3*a3*t^2 + ...
+  // [0 0 0 3 0 ...]                    with T = [t^0 t^1 t^2 t^3 t^4 ...]
+  // [0 0 0 0 4 ...]            -->     f_k(t) = T * p_k
+  // [  ...   ...  ]            --> df_k(t)/dt = T * V * p_k
+  size_t n_segments = poly_opt_.getNumberSegments();
+
+  V_all_segments_.resize(n_segments * N, n_segments * N);
+  V_.resize(N, N);
+
+  V_all_segments_.setZero();
+  V_.setZero();
+  for (int i = 0; i < V_all_segments_.diagonal(1).size(); ++i) {
+    V_all_segments_.diagonal(1)(i) = (i + 1) % N;
+  }
+  V_ = V_all_segments_.block(0, 0, N, N);
+
+  Acc_.resize(N, N);
+  Acc_.setZero();
+  for (int i = 0; i < Acc_.diagonal(2).size(); ++i) {
+    Acc_.diagonal(2)(i) = (i + 1)*(i + 2);
+  }
+
+  Jerk_.resize(N, N);
+  Jerk_.setZero();
+  for (int i = 0; i < Jerk_.diagonal(3).size(); ++i) {
+    Jerk_.diagonal(3)(i) = (i + 1)*(i + 2)*(i + 3);
+  }
+
+  Snap_.resize(N, N);
+  Snap_.setZero();
+  for (int i = 0; i < Snap_.diagonal(4).size(); ++i) {
+    Snap_.diagonal(4)(i) = (i + 1)*(i + 2)*(i + 3)*(i + 4);
+  }
+}
 template <int _N>
 void PolynomialOptimizationNonLinear<_N>::printMatlabSampledTrajectory(
         const std::string& file) const {
