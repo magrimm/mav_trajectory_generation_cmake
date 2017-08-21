@@ -523,6 +523,11 @@ class PolynomialOptimizationNonLinear {
   // [0 0 0 0 4 ...]            -->     f_k(t) = T * p_k
   // [  ...   ...  ]            --> df_k(t)/dt = T * V * p_k
   void calculatePolynomialDerivativeMappingMatrices();
+
+  void setFreeEndpointDerivativeHardConstraints(
+          const std::vector<double>& initial_solution,
+          std::vector<double>* lower_bounds, std::vector<double>* upper_bounds);
+
   // nlopt optimization object.
   std::shared_ptr<nlopt::opt> nlopt_;
 
