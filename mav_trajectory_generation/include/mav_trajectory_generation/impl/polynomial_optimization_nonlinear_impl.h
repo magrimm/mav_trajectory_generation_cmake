@@ -35,6 +35,8 @@ inline void OptimizationInfo::print(std::ostream& stream) const {
   stream << "  cost collision:        " << cost_collision << std::endl;
   stream << "  cost time:             " << cost_time << std::endl;
   stream << "  cost soft constraints: " << cost_soft_constraints << std::endl;
+  stream << "  sum: " << cost_trajectory + cost_collision + cost_time +
+          cost_soft_constraints << std::endl;
   stream << "  maxima: " << std::endl;
   for (const std::pair<int, Extremum>& m : maxima) {
     stream << "    " << positionDerivativeToString(m.first) << ": "
@@ -1214,6 +1216,7 @@ double PolynomialOptimizationNonLinear<_N
   optimization_data->getTrajectory(&trajectory_i);
   optimization_data->all_trajectories_.push_back(trajectory_i);
 
+  // Update the optimization information
   optimization_data->optimization_info_.n_iterations++;
   optimization_data->optimization_info_.cost_trajectory = cost_trajectory;
   optimization_data->optimization_info_.cost_collision = cost_collision;
@@ -1851,22 +1854,21 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
 
   if (gradients != NULL) {
     const size_t n_segments = data->poly_opt_.getNumberSegments();
+    const size_t n_free_constraints = data->poly_opt_.getNumberFreeConstraints();
+    const size_t dim = data->poly_opt_.getDimension();
 
     gradients->clear();
     gradients->resize(n_segments);
 
     // Initialize changed segment times for numerical derivative
-    std::vector<double> segment_times_smaller, segment_times_bigger;
-    segment_times_smaller.resize(n_segments);
-    segment_times_bigger.resize(n_segments);
+    std::vector<double> segment_times_smaller(n_segments);
+    std::vector<double> segment_times_bigger(n_segments);
 
-    // TODO: parameterize 0.1s
-    // TODO: check if segement times are bigger than 0.1; else ?
     double increment_time = data->optimization_parameters_.increment_time; //[s]
-
     for (int n = 0; n < n_segments; ++n) {
       // Calculate cost with lower segment time
       segment_times_smaller = segment_times;
+      // TODO: check if segment times are bigger than 0.1; else ?
       segment_times_smaller[n] = segment_times_smaller[n] <= 0.1 ?
                                 0.1 : segment_times_smaller[n] - increment_time;
 
@@ -1876,6 +1878,9 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
       // Calculate cost and gradient with new segment time
       std::vector<Eigen::VectorXd> grad_d_smaller, grad_c_smaller,
               grad_sc_smaller;
+      grad_d_smaller.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+      grad_c_smaller.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+      grad_sc_smaller.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
       double J_d_smaller = data->getCostAndGradientDerivative(
               &grad_d_smaller, data);
       double J_c_smaller = data->getCostAndGradientCollision(
@@ -1894,6 +1899,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
       // Now the same with an increased segment time
       // Calculate cost with higher segment time
       segment_times_bigger = segment_times;
+      // TODO: check if segment times are bigger than 0.1; else ?
       segment_times_bigger[n] = segment_times_bigger[n] <= 0.1 ?
                                 0.1 : segment_times_bigger[n] + increment_time;
 
@@ -1902,6 +1908,9 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
 
       // Calculate cost and gradient with new segment time
       std::vector<Eigen::VectorXd> grad_d_bigger, grad_c_bigger, grad_sc_bigger;
+      grad_d_bigger.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+      grad_c_bigger.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+      grad_sc_bigger.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
       double J_d_bigger = data->getCostAndGradientDerivative(
               &grad_d_bigger, data);
       double J_c_bigger = data->getCostAndGradientCollision(
