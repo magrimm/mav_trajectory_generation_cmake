@@ -956,6 +956,9 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndC
   }
 
   std::vector<Eigen::VectorXd> grad_d, grad_c, grad_sc;
+  grad_d.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+  grad_c.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+  grad_sc.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
   double J_d = 0.0;
   double J_c = 0.0;
   double J_sc = 0.0;
@@ -1371,6 +1374,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
       // 2) Calculate the T vector (see paper equation (8)) for each segment
       Eigen::VectorXd T; // Is supposed to be a column-vector
       T.resize(N);
+      T.setZero();
       for (int n = 0; n < N; ++n) {
         T[n] = pow(t, n);
       }
