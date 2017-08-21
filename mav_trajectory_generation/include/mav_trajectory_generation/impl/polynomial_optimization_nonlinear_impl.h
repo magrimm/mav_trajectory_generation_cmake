@@ -123,7 +123,6 @@ bool PolynomialOptimizationNonLinear<_N
   // Get dimension
   const size_t dim = poly_opt_.getDimension();
 
-
   // Parameters before removing constraints
   const size_t n_free_constraints = poly_opt_.getNumberFreeConstraints();
   const size_t n_fixed_constraints = poly_opt_.getNumberFixedConstraints();
@@ -152,24 +151,6 @@ bool PolynomialOptimizationNonLinear<_N
   poly_opt_.getSegmentTimes(&segment_times);
   setupFromVertices(vertices_, segment_times, derivative_to_optimize_);
 
-  // TODO: needed? find runtime error
-//  // Add inequality constraints again after reset nlopt_ --> Hard constraint
-//  if (!optimization_parameters_.use_soft_constraints) {
-//    for (const auto& constraint_data : inequality_constraints_) {
-//      try {
-//        nlopt_->add_inequality_constraint(
-//                &PolynomialOptimizationNonLinear<
-//                        N>::evaluateMaximumMagnitudeConstraint,
-//                constraint_data.get(),
-//                optimization_parameters_.inequality_constraint_tolerance);
-//      } catch (std::exception& e) {
-//        LOG(ERROR) << "ERROR while setting inequality constraint " << e.what()
-//                   << std::endl;
-//        return false;
-//      }
-//    }
-//  }
-
   // Parameters after removing constraints // TODO: test if needed and true
   const size_t n_free_constraints_after = poly_opt_.getNumberFreeConstraints();
   const size_t n_fixed_constraints_after = poly_opt_.getNumberFixedConstraints();
@@ -177,11 +158,10 @@ bool PolynomialOptimizationNonLinear<_N
   // 5) Get your new mapping matrix L (p = L*[d_f d_P]^T = A^(-1)*M*[d_f d_P]^T)
   // Fixed constraints are the same except plus the position constraints we
   // removed. Add those removed position constraints to free derivatives.
-  Eigen::MatrixXd M, M_pinv, A, A_inv;
+  Eigen::MatrixXd M_pinv, A, A_inv;
   poly_opt_.getA(&A);
   poly_opt_.getMpinv(&M_pinv);
 
-  const int n_constraints_per_vertex = N / 2; // Num constraints per vertex
   // 6) Calculate your reordered endpoint-derivatives. d_all = L^(-1) * p_k
   // where p_k are the old coefficients from the original linear solution and
   // L the new remapping matrix
@@ -753,7 +733,8 @@ int PolynomialOptimizationNonLinear<_N
   int result;
 
   try {
-    timing::Timer timer_solve("optimize_nonlinear_full_total_time");
+    timing::Timer timer_solve
+            ("optimize_nonlin_free_derivatives_and_collision_and_time");
     result = nlopt_->optimize(initial_solution, final_cost);
     timer_solve.Stop();
   } catch (std::exception& e) {
@@ -960,7 +941,6 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraints(
   }
 
   // TODO: get rid after testing
-  double cost_trajectory2 = optimization_data->poly_opt_.computeCost();
   double cost_trajectory = J_d;
   double cost_time = 0.0;
   double cost_constraints = 0.0;
@@ -977,7 +957,6 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraints(
               << optimization_data->optimization_info_.n_iterations << "---- "
               << std::endl;
     std::cout << "  trajectory: " << cost_trajectory << std::endl;
-    std::cout << "  computeCost(): " << cost_trajectory2 << std::endl;
     std::cout << "  time: " << cost_time << std::endl;
     std::cout << "  constraints: " << cost_constraints << std::endl;
     std::cout << "  sum: " << cost_trajectory + cost_time + cost_constraints
