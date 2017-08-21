@@ -582,6 +582,8 @@ class PolynomialOptimizationNonLinear {
 
   std::vector<double> lower_bounds_;
   std::vector<double> upper_bounds_;
+
+  double trajectory_time_initial_{};
 };
 
 }  // namespace mav_trajectory_generation

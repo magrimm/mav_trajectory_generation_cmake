@@ -151,6 +151,9 @@ bool PolynomialOptimizationNonLinear<_N
   poly_opt_.getSegmentTimes(&segment_times);
   setupFromVertices(vertices_, segment_times, derivative_to_optimize_);
 
+  // Save initial segment time
+  trajectory_time_initial_ = computeTotalTrajectoryTime(segment_times);
+
   // Parameters after removing constraints // TODO: test if needed and true
   const size_t n_free_constraints_after = poly_opt_.getNumberFreeConstraints();
   const size_t n_fixed_constraints_after = poly_opt_.getNumberFixedConstraints();
@@ -1201,6 +1204,8 @@ double PolynomialOptimizationNonLinear<_N
 
     double total_time =
             optimization_data->computeTotalTrajectoryTime(segment_times);
+    std::cout << "INITIAL TIME: "
+              << optimization_data->trajectory_time_initial_ << std::endl;
     std::cout << "TOTAL TIME: " << total_time << std::endl;
   }
 
