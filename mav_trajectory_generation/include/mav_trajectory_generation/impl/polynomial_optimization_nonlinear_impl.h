@@ -1529,6 +1529,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
   if (gradient != NULL) {
     // Numerical gradients
     Eigen::VectorXd grad_c_potential(data->dimension_);
+    grad_c_potential.setZero();
     Eigen::VectorXd increment(data->dimension_);
     for (int k = 0; k < data->dimension_; ++k) {
       increment.setZero();
@@ -1548,7 +1549,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
       double left_cost = data->getCostPotential(left_dist);
       double right_cost = data->getCostPotential(right_dist);
 
-      grad_c_potential[k] += (right_cost - left_cost) / (2.0 * increment_dist);
+      grad_c_potential[k] = (right_cost - left_cost) / (2.0 * increment_dist);
     }
 
     (*gradient) = grad_c_potential;
