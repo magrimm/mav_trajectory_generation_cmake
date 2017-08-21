@@ -971,8 +971,6 @@ objectiveFunctionFreeConstraintsAndCollision(
     if (optimization_data->optimization_parameters_.use_soft_constraints) {
       J_sc = optimization_data->getCostAndGradientSoftConstraints(
               &grad_sc, optimization_data);
-    } else { // If not used, resize and set everything to zero
-      grad_sc.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
     }
   } else {
     J_d = optimization_data->getCostAndGradientDerivative(
@@ -1109,7 +1107,10 @@ double PolynomialOptimizationNonLinear<_N
 //  std::cout << std::endl;
 
   std::vector<Eigen::VectorXd> grad_d, grad_c, grad_sc;
-  std::vector<double> grad_t;
+  std::vector<double> grad_t(n_segments);
+  grad_d.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+  grad_c.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+  grad_sc.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
   double J_d = 0.0;
   double J_c = 0.0;
   double J_t = 0.0;
@@ -1123,8 +1124,6 @@ double PolynomialOptimizationNonLinear<_N
     if (optimization_data->optimization_parameters_.use_soft_constraints) {
       J_sc = optimization_data->getCostAndGradientSoftConstraints(
               &grad_sc, optimization_data);
-    } else { // If not used, resize and set everything to zero
-      grad_sc.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
     }
   } else {
     J_d = optimization_data->getCostAndGradientDerivative(
