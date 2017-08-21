@@ -443,6 +443,10 @@ class PolynomialOptimizationNonLinear {
   static void getNumericalGradientsCollision(
           std::vector<Eigen::VectorXd>* gradients, void* opt_data);
 
+  // Calculate the numerical gradients of the squared snap.
+  static void getNumericalGradDerivatives(
+          std::vector<Eigen::VectorXd>* gradients, void* opt_data);
+
   // Calculate the numerical gradients and the cost of the segment times.
   static double getCostAndGradientTime(
           std::vector<double>* gradients, void* opt_data);

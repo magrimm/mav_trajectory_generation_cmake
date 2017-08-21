@@ -1674,6 +1674,64 @@ void PolynomialOptimizationNonLinear<_N>::getNumericalGradientsCollision(
 }
 
 template <int _N>
+void PolynomialOptimizationNonLinear<_N>::getNumericalGradDerivatives(
+        std::vector<Eigen::VectorXd>* gradients_num, void* opt_data) {
+  CHECK_NOTNULL(opt_data);
+  CHECK_NOTNULL(gradients_num); // Num gradients only needed for grad-based opti
+
+  PolynomialOptimizationNonLinear<N>* data =
+          static_cast<PolynomialOptimizationNonLinear<N>*>(opt_data);
+
+  const size_t n_free_constraints =
+          data->poly_opt_.getNumberFreeConstraints();
+  const size_t dim = data->poly_opt_.getDimension();
+
+  // Get the current free constraints
+  std::vector<Eigen::VectorXd> free_constraints;
+  data->poly_opt_.getFreeConstraints(&free_constraints);
+
+  gradients_num->clear();
+  gradients_num->resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+
+  std::vector<Eigen::VectorXd> free_constraints_left, free_constraints_right;
+  free_constraints_left.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+  free_constraints_right.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+  double increment_dist = data->optimization_parameters_.map_resolution;
+
+  std::vector<Eigen::VectorXd> increment(dim, Eigen::VectorXd::Zero
+          (n_free_constraints));
+  for (int k = 0; k < dim; ++k) {
+
+    increment.clear();
+    increment.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+    for (int n = 0; n < n_free_constraints; ++n) {
+
+      increment[k].setZero();
+      increment[k][n] = increment_dist;
+
+      for (int k2 = 0; k2 < dim; ++k2) {
+        free_constraints_left[k2] = free_constraints[k2] - increment[k2];
+      }
+      data->poly_opt_.setFreeConstraints(free_constraints_left);
+      double cost_left = data->getCostAndGradientDerivative(NULL, data);
+
+      for (int k2 = 0; k2 < dim; ++k2) {
+        free_constraints_right[k2] = free_constraints[k2] + increment[k2];
+      }
+      data->poly_opt_.setFreeConstraints(free_constraints_right);
+      double cost_right = data->getCostAndGradientDerivative(NULL, data);
+
+      double grad_k_n = (cost_right - cost_left) / (2.0 * increment_dist);
+      gradients_num->at(k)[n] = grad_k_n;
+    }
+  }
+
+  // Set again the original constraints from before calculating the numerical
+  // constraints
+  data->poly_opt_.setFreeConstraints(free_constraints);
+}
+
+template <int _N>
 double PolynomialOptimizationNonLinear<_N>::getCostAndGradientSoftConstraints(
         std::vector<Eigen::VectorXd>* gradients, void* opt_data) {
   CHECK_NOTNULL(opt_data);
