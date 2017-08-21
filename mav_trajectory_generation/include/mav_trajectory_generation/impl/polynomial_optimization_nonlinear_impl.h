@@ -912,7 +912,8 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraints(
 }
 
 template <int _N>
-double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraintsAndCollision(
+double PolynomialOptimizationNonLinear<_N>::
+objectiveFunctionFreeConstraintsAndCollision(
         const std::vector<double>& x, std::vector<double>& gradient, void* data) {
   CHECK_NOTNULL(data);
 
@@ -1442,16 +1443,20 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
                   pos + increment, NULL, data);
           grad_c_k_num[k] += (cost_right - cost_left) / (2.0 * increment_dist);
 
-          if (data->optimization_parameters_.print_debug_info) {
-            std::cout << "grad_c_k_num[" << k << "]: " << grad_c_k_num[k]
-                      << " = (" << cost_right << " - " << cost_left
-                      << ") / (2.0 * " << increment_dist << ")" << std::endl;
-          }
+//          if (data->optimization_parameters_.print_debug_info) {
+//            std::cout << "grad_c_k_num[" << k << "]: " << grad_c_k_num[k]
+//                      << " = (" << cost_right << " - " << cost_left
+//                      << ") / (2.0 * " << increment_dist << ")" << std::endl;
+//          }
         }
 
-        if (data->optimization_parameters_.print_debug_info) {
-          std::cout << "grad_c_d_f: " << grad_c_d_f[0] << " | "
-                    << grad_c_d_f[1] << " | " << grad_c_d_f[2] << std::endl;
+        if (gradients != NULL) {
+          if (data->optimization_parameters_.print_debug_info) {
+            std::cout << "diff grad num coll potential: "
+                      << grad_c_d_f[0] - grad_c_k_num[0] << " | "
+                      << grad_c_d_f[1] - grad_c_k_num[1] << " | "
+                      << grad_c_d_f[2] - grad_c_k_num[2] << std::endl;
+          }
         }
       }
 
@@ -1468,6 +1473,8 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
 
             grad_c[k] += grad_c_k;
           }
+        } else {
+          LOG(INFO) << "VELOCITY NORM < 1e-6! --> DROP GRADIENT.";
         }
       }
 
