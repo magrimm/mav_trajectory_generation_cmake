@@ -1451,10 +1451,11 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
 
         if (gradients != NULL) {
           if (data->optimization_parameters_.print_debug_info) {
-            std::cout << "diff grad num coll potential: "
-                      << grad_c_d_f[0] - grad_c_k_num[0] << " | "
-                      << grad_c_d_f[1] - grad_c_k_num[1] << " | "
-                      << grad_c_d_f[2] - grad_c_k_num[2] << std::endl;
+            Eigen::VectorXd diff = grad_c_d_f - grad_c_k_num;
+            if ((diff.array() != 0.0).any()) {
+              std::cout << "diff grad num coll potential: " << diff[0] << " | "
+                        << diff[1] << " | " << diff[2] << std::endl;
+            }
           }
         }
       }
