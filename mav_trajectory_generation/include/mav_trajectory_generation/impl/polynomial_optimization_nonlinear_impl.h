@@ -1264,9 +1264,9 @@ double PolynomialOptimizationNonLinear<_N
       gradient[j] = w_t * grad_t[j];
     }
 
-    for (int i = 0; i < n_free_constraints; ++i) {
-      for (int k = 0; k < dim; ++k) {
-        const int start_idx = n_segments + (k * n_free_constraints);
+    for (int k = 0; k < dim; ++k) {
+      const int start_idx = n_segments + (k * n_free_constraints);
+      for (int i = 0; i < n_free_constraints; ++i) {
         gradient[start_idx + i] =
                 w_d * grad_d[k][i] + w_c * grad_c[k][i] + w_sc * grad_sc[k][i];
       }
