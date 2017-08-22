@@ -275,7 +275,16 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraints() {
           upper_bounds;
 
   // compute initial solution
-  poly_opt_.solveLinear();
+  if (optimization_parameters_.solve_with_position_constraint) {
+    poly_opt_.solveLinear();
+    // TODO: find better way of doing this
+    // Save the trajectory from the initial guess/solution
+    trajectory_initial_.clear();
+    getTrajectory(&trajectory_initial_);
+  } else {
+    computeInitialSolutionWithoutPositionConstraints();
+  }
+
   std::vector<Eigen::VectorXd> free_constraints;
   poly_opt_.getFreeConstraints(&free_constraints);
   CHECK(free_constraints.size() > 0);
