@@ -233,6 +233,16 @@ int PolynomialOptimizationNonLinear<_N>::optimizeTime() {
   poly_opt_.getSegmentTimes(&segment_times);
   const size_t n_segments = segment_times.size();
 
+  // TODO: FIX PROPERLY
+  // compute initial solution
+  poly_opt_.solveLinear();
+  // Save the trajectory from the initial guess/solution
+  trajectory_initial_.clear();
+  getTrajectory(&trajectory_initial_);
+  // Save the trajectory from the initial guess/solution
+  trajectory_initial_after_removing_pos_.clear();
+  getTrajectory(&trajectory_initial_after_removing_pos_);
+
   initial_step.reserve(n_segments);
   for (double t : segment_times) {
     initial_step.push_back(optimization_parameters_.initial_stepsize_rel * t);
@@ -285,6 +295,11 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraints() {
     computeInitialSolutionWithoutPositionConstraints();
   }
 
+  // Save the trajectory from the initial guess/solution
+  trajectory_initial_after_removing_pos_.clear();
+  getTrajectory(&trajectory_initial_after_removing_pos_);
+
+  // Set up variables
   std::vector<Eigen::VectorXd> free_constraints;
   poly_opt_.getFreeConstraints(&free_constraints);
   CHECK(free_constraints.size() > 0);
@@ -364,6 +379,10 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
   // compute initial solution
   if (optimization_parameters_.solve_with_position_constraint) {
     poly_opt_.solveLinear();
+    // TODO: find better way of doing this
+    // Save the trajectory from the initial guess/solution
+    trajectory_initial_.clear();
+    getTrajectory(&trajectory_initial_);
   } else {
     computeInitialSolutionWithoutPositionConstraints();
   }
@@ -550,6 +569,10 @@ int PolynomialOptimizationNonLinear<_N
   // compute initial solution
   if (optimization_parameters_.solve_with_position_constraint) {
     poly_opt_.solveLinear();
+    // TODO: find better way of doing this
+    // Save the trajectory from the initial guess/solution
+    trajectory_initial_.clear();
+    getTrajectory(&trajectory_initial_);
   } else {
     computeInitialSolutionWithoutPositionConstraints();
   }
