@@ -1260,6 +1260,24 @@ double PolynomialOptimizationNonLinear<_N
     gradient.clear();
     gradient.resize(n_segments + 3*n_free_constraints);
 
+    if (optimization_data->optimization_parameters_.print_debug_info) {
+      std::cout << std::endl << "GRADIENTS TIME: " << std::endl;
+      for (int j = 0; j < n_segments; ++j) {
+        std::cout << j << ": " << w_t * grad_t[j] << std::endl;
+      }
+
+      std::cout << "GRADIENTS D | C | SC: " << std::endl;
+      for (int k = 0; k < dim; ++k) {
+        const int start_idx = n_segments + (k * n_free_constraints);
+        for (int i = 0; i < n_free_constraints; ++i) {
+          std::cout << start_idx+i << ": "
+                    << w_d * grad_d[k][i] << " | "
+                    << w_c * grad_c[k][i] << " | "
+                    << w_sc * grad_sc[k][i] << " | " << std::endl;
+        }
+      }
+    }
+
     for (int j = 0; j < n_segments; ++j) {
       gradient[j] = w_t * grad_t[j];
     }
