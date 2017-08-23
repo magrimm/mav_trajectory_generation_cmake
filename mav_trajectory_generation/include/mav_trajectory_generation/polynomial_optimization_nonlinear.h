@@ -504,7 +504,6 @@ class PolynomialOptimizationNonLinear {
   static double computeTotalTrajectoryTime(
       const std::vector<double>& segment_times);
 
-
   double lerp(double x, double x1, double x2, double q00, double q01);
   double biLerp(double x, double y, double q11, double q12, double q21,
                 double q22, double x1, double x2, double y1, double y2);
