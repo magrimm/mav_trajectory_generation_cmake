@@ -580,6 +580,7 @@ class PolynomialOptimizationNonLinear {
   Trajectory trajectory_initial_after_removing_pos_;
   std::vector<Trajectory> all_trajectories_;
 
+  // TODO: ONLY DEBUG
   std::vector<double> lower_bounds_;
   std::vector<double> upper_bounds_;
 
