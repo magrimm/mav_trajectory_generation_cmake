@@ -516,8 +516,9 @@ class PolynomialOptimizationNonLinear {
   std::vector<std::pair<float, bool>> getNeighborsSDF(
           const std::vector<int64_t>& idx,
           const std::shared_ptr<sdf_tools::SignedDistanceField>& sdf);
-  double getDistanceSDF(const Eigen::Vector3d& position,
-                       const std::shared_ptr<sdf_tools::SignedDistanceField>& sdf);
+  double getDistanceSDF(
+          const Eigen::Vector3d& position,
+          const std::shared_ptr<sdf_tools::SignedDistanceField>& sdf);
 
   // Calculate matrix for mapping vector of polynomial coefficients of a
   // function to the polynomial coefficients of its derivative.
