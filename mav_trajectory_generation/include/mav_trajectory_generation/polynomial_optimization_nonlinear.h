@@ -584,7 +584,11 @@ class PolynomialOptimizationNonLinear {
   std::vector<double> lower_bounds_;
   std::vector<double> upper_bounds_;
 
+  // Initial trajectory time before nonlinear optimization
   double trajectory_time_initial_{};
+  //  Total cost of nonlinear optimization at iteration 0
+  double total_cost_iter0_{};
+  bool is_iter0_ = true;
 };
 
 }  // namespace mav_trajectory_generation

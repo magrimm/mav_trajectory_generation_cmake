@@ -1074,6 +1074,8 @@ objectiveFunctionFreeConstraintsAndCollision(
     std::cout << "  constraints: " << cost_constraints << std::endl;
     std::cout << "  sum: " << cost_trajectory + cost_collision +
             cost_constraints << std::endl;
+    std::cout << "  sum iter0: " << optimization_data->total_cost_iter0_
+              << std::endl;
   }
 
   // Save the trajectory of this iteration
@@ -1086,6 +1088,13 @@ objectiveFunctionFreeConstraintsAndCollision(
   optimization_data->optimization_info_.cost_collision = cost_collision;
   optimization_data->optimization_info_.cost_soft_constraints =
           cost_constraints;
+
+  // Save the total cost at iteration 0
+  if (optimization_data->is_iter0_) {
+    optimization_data->total_cost_iter0_ =
+            cost_trajectory + cost_collision + cost_constraints;
+    optimization_data->is_iter0_ = false;
+  }
 
   if (!gradient.empty()) {
     gradient.clear();
@@ -1244,6 +1253,8 @@ double PolynomialOptimizationNonLinear<_N
     std::cout << "  constraints: " << cost_constraints << std::endl;
     std::cout << "  sum: " << cost_trajectory + cost_collision + cost_time +
                               cost_constraints << std::endl;
+    std::cout << "  sum iter0: " << optimization_data->total_cost_iter0_
+              << std::endl;
 
     std::cout << "SEGMENT TIMES" << std::endl;
     for (int j = 0; j < segment_times.size(); ++j) {
@@ -1269,6 +1280,13 @@ double PolynomialOptimizationNonLinear<_N
   optimization_data->optimization_info_.cost_time = cost_time;
   optimization_data->optimization_info_.cost_soft_constraints =
           cost_constraints;
+
+  // Save the total cost at iteration 0
+  if (optimization_data->is_iter0_) {
+    optimization_data->total_cost_iter0_ =
+            cost_trajectory + cost_collision + cost_time + cost_constraints;
+    optimization_data->is_iter0_ = false;
+  }
 
   if (!gradient.empty()) {
     gradient.clear();
