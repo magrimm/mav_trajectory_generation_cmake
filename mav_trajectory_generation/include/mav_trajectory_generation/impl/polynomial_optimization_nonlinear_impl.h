@@ -1974,7 +1974,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
       }
       double total_time_left =
               computeTotalTrajectoryTime(segment_times_smaller);
-      double J_t_smaller = total_time_left * total_time_left;
+      double J_t_smaller = total_time_left; // TODO: squared?
       double cost_left = w_d * J_d_smaller + w_c * J_c_smaller
                          + w_sc * J_sc_smaller + w_t * J_t_smaller;
 
@@ -2004,7 +2004,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
       }
       double total_time_right =
               computeTotalTrajectoryTime(segment_times_bigger);
-      double J_t_bigger = total_time_right * total_time_right;
+      double J_t_bigger = total_time_right; // TODO: squared?
       double cost_right = w_d * J_d_bigger + w_c * J_c_bigger
                           + w_sc * J_sc_bigger + w_t * J_t_bigger;
 
@@ -2019,7 +2019,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
 
   // Compute cost without gradient (only time)
   double total_time = computeTotalTrajectoryTime(segment_times);
-  double J_t = total_time * total_time;
+  double J_t = total_time;  // TODO: squared?
 
   return J_t;
 }
