@@ -533,6 +533,10 @@ int PolynomialOptimizationNonLinear<_N>::optimizeTimeAndFreeConstraints() {
     lower_bounds[i] = 0.1;
   }
 
+  // TODO: REMOVE only debug
+  lower_bounds_ = lower_bounds;
+  upper_bounds_ = upper_bounds;
+
   try {
     nlopt_->set_initial_step(initial_step);
     nlopt_->set_lower_bounds(lower_bounds);
@@ -648,6 +652,10 @@ int PolynomialOptimizationNonLinear<_N
                       std::end(lower_bounds_free));
   upper_bounds.insert(std::end(upper_bounds), std::begin(upper_bounds_free),
                       std::end(upper_bounds_free));
+
+  // TODO: REMOVE only debug
+  lower_bounds_ = lower_bounds;
+  upper_bounds_ = upper_bounds;
 
   initial_step.reserve(n_optmization_variables);
   for (double x : initial_solution) {
@@ -1134,14 +1142,20 @@ double PolynomialOptimizationNonLinear<_N
   optimization_data->poly_opt_.updateSegmentTimes(segment_times);
   optimization_data->poly_opt_.setFreeConstraints(free_constraints);
 
-//  std::cout << "FREE CONSTRAINTS" << std::endl;
-//  for (int i = 0; i < free_constraints[0].size(); ++i) {
-//    std::cout << i << ": " << free_constraints[0][i] << " | "
-//              << free_constraints[1][i] << " | "
-//              << free_constraints[2][i]
-//              << std::endl;
-//  }
-//  std::cout << std::endl;
+  if (optimization_data->optimization_parameters_.print_debug_info) {
+    std::cout << "LOWER BOUNDS -- FREE CONSTRAINTS -- UPPER BOUNDS" << std::endl;
+    for (size_t d = 0; d < dim; ++d) {
+      for (int i = 0; i < free_constraints[0].size(); ++i) {
+        const size_t idx_start = d * n_free_constraints;
+        std::cout << d << " " << i << ": "
+                  << optimization_data->lower_bounds_[idx_start+i] << " | "
+                  << free_constraints[d][i] << " | "
+                  << optimization_data->upper_bounds_[idx_start+i] << std::endl;
+      }
+      std::cout << std::endl;
+    }
+    std::cout << std::endl;
+  }
 
   std::vector<Eigen::VectorXd> grad_d, grad_c, grad_sc;
   std::vector<double> grad_t(n_segments);
