@@ -2010,17 +2010,17 @@ template <int _N>
 double PolynomialOptimizationNonLinear<_N>::getCostPotential(
         double collision_distance) {
 
-  double cost = 0.0;
-
+  // Get parameter
   const double epsilon = optimization_parameters_.epsilon;
   const double robot_radius = optimization_parameters_.robot_radius;
+  const double collision_potential_multiplier =
+          optimization_parameters_.coll_pot_multiplier;
 
+  double cost = 0.0;
   collision_distance -= robot_radius;
   if (collision_distance < 0.0) {
 //    cost = -collision_distance + 0.5 * epsilon;
-
-    cost = optimization_parameters_.coll_pot_multiplier*(-collision_distance)
-           + 0.5 * epsilon;
+    cost = collision_potential_multiplier*(-collision_distance) + 0.5 * epsilon;
   } else if (collision_distance <= epsilon) {
     double epsilon_distance = collision_distance - epsilon;
     cost = 0.5 * 1.0 / epsilon * epsilon_distance * epsilon_distance;
