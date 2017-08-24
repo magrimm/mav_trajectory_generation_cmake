@@ -68,7 +68,8 @@ struct NonlinearOptimizationParameters {
         epsilon(0.5),
         robot_radius(0.5),
         coll_pot_multiplier(1.0),
-        solve_with_position_constraint(false) {}
+        solve_with_position_constraint(false),
+        is_collision_safe(true) {}
 
   // Stopping criteria, if objective function changes less than absolute value.
   // Disabled if negative.
@@ -180,6 +181,9 @@ struct NonlinearOptimizationParameters {
   // Do we solve with or without position constraints for the vertices
   // between start and goal?
   bool solve_with_position_constraint;
+
+  // Should we increase the total cost to the initial cost in case of collision?
+  bool is_collision_safe;
 };
 
 class OptimizationInfo {

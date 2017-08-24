@@ -1245,6 +1245,19 @@ double PolynomialOptimizationNonLinear<_N
   double cost_time = w_t * J_t;
   double cost_constraints = w_sc * J_sc;
 
+  // If in collision and total cost is smaller than initial total cost
+  const double total_cost =
+          cost_trajectory + cost_collision + cost_time + cost_constraints;
+  if (optimization_data->optimization_parameters_.is_collision_safe) {
+    if (is_collision && (total_cost < optimization_data->total_cost_iter0_)) {
+      std::cout << "old coll cost: " << cost_collision;
+      cost_collision = optimization_data->total_cost_iter0_ -
+              (total_cost - cost_collision);
+      std::cout << " | new coll cost: " << cost_collision << std::endl;
+      LOG(INFO) << "COLLISION: Raise total cost to inital total cost.";
+    }
+  }
+
   if (optimization_data->optimization_parameters_.print_debug_info) {
     std::cout << "---- cost at iteration "
               << optimization_data->optimization_info_.n_iterations << "---- "
