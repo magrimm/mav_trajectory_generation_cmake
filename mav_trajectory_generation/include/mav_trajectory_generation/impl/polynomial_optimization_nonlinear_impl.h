@@ -2016,7 +2016,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
       const double dJd_dt = (J_d_bigger - J_d_smaller) / (2.0 * increment_time);
       const double dJc_dt = (J_c_bigger - J_c_smaller) / (2.0 * increment_time);
       const double dJsc_dt = (J_sc_bigger - J_sc_smaller) /(2.0*increment_time);
-      const double dJt_dt = 1.0; // J_t = t --> dJt_dt = 1.0;
+      const double dJt_dt = 1.0; // J_t = t --> dJt_dt = 1.0 for all tm
 
       // Calculate the gradient
       gradients->at(n) = w_d*dJd_dt + w_c*dJc_dt + w_sc*dJsc_dt + w_t*dJt_dt;
