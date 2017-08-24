@@ -1972,7 +1972,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
     // Initialize changed segment times for numerical derivative
     std::vector<double> segment_times_smaller(n_segments);
     std::vector<double> segment_times_bigger(n_segments);
-    double increment_time = data->optimization_parameters_.increment_time; //[s]
+    const double increment_time = data->optimization_parameters_.increment_time;
     for (int n = 0; n < n_segments; ++n) {
       // Calculate cost with lower segment time
       segment_times_smaller = segment_times;
@@ -1985,18 +1985,13 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
 
       // Calculate cost and gradient with new segment time
       bool is_collision_smaller;
-      double J_d_smaller = data->getCostAndGradientDerivative(NULL, data);
-      double J_c_smaller = data->getCostAndGradientCollision(
+      const double J_d_smaller = data->getCostAndGradientDerivative(NULL, data);
+      const double J_c_smaller = data->getCostAndGradientCollision(
               NULL, data, &is_collision_smaller);
       double J_sc_smaller = 0.0;
       if (data->optimization_parameters_.use_soft_constraints) {
         J_sc_smaller = data->getCostAndGradientSoftConstraints(NULL, data);
       }
-      double total_time_left =
-              computeTotalTrajectoryTime(segment_times_smaller);
-      double J_t_smaller = total_time_left; // TODO: squared?
-      double cost_left = w_d * J_d_smaller + w_c * J_c_smaller
-                         + w_sc * J_sc_smaller + w_t * J_t_smaller;
 
       // Now the same with an increased segment time
       // Calculate cost with higher segment time
@@ -2010,21 +2005,21 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
 
       // Calculate cost and gradient with new segment time
       bool is_collision_bigger;
-      double J_d_bigger = data->getCostAndGradientDerivative(NULL, data);
-      double J_c_bigger = data->getCostAndGradientCollision(
+      const double J_d_bigger = data->getCostAndGradientDerivative(NULL, data);
+      const double J_c_bigger = data->getCostAndGradientCollision(
               NULL, data, &is_collision_bigger);
       double J_sc_bigger = 0.0;
       if (data->optimization_parameters_.use_soft_constraints) {
         J_sc_bigger = data->getCostAndGradientSoftConstraints(NULL, data);
       }
-      double total_time_right =
-              computeTotalTrajectoryTime(segment_times_bigger);
-      double J_t_bigger = total_time_right; // TODO: squared?
-      double cost_right = w_d * J_d_bigger + w_c * J_c_bigger
-                          + w_sc * J_sc_bigger + w_t * J_t_bigger;
+
+      const double dJd_dt = (J_d_bigger - J_d_smaller) / (2.0 * increment_time);
+      const double dJc_dt = (J_c_bigger - J_c_smaller) / (2.0 * increment_time);
+      const double dJsc_dt = (J_sc_bigger - J_sc_smaller) /(2.0*increment_time);
+      const double dJt_dt = 1.0; // J_t = t --> dJt_dt = 1.0;
 
       // Calculate the gradient
-      gradients->at(n) = (cost_right - cost_left) / (2.0 * increment_time);
+      gradients->at(n) = w_d*dJd_dt + w_c*dJc_dt + w_sc*dJsc_dt + w_t*dJt_dt;
     }
 
     // Set again the original segment times from before calculating the
