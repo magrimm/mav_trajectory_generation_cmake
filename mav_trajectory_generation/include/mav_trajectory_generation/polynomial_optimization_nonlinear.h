@@ -431,13 +431,14 @@ class PolynomialOptimizationNonLinear {
 
   // Calculate the cost and gradients of the collision potential.
   static double getCostAndGradientCollision(
-          std::vector<Eigen::VectorXd>* gradients, void* data);
+          std::vector<Eigen::VectorXd>* gradients, void* data,
+          bool* is_collision);
 
   // Calculate the cost and gradient of the collision potential at the
   // current position. (See paper [3])
   static double getCostAndGradientPotentialESDF(
           const Eigen::VectorXd& position, Eigen::VectorXd* gradient,
-          void* opt_data);
+          void* opt_data, bool* is_collision);
 
   // Calculate the numerical gradients of the collision potential.
   static void getNumericalGradientsCollision(
@@ -457,7 +458,7 @@ class PolynomialOptimizationNonLinear {
 
   // Calculate the cost of the collision potential at a given distance to the
   // obstacle (ie. current distance to obstacle)
-  double getCostPotential(double collision_distance);
+  double getCostPotential(double collision_distance, bool* is_collision);
 
   // Evaluates the maximum magnitude constraint at the current value of
   // the optimization variables.

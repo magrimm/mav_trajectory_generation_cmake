@@ -1001,6 +1001,7 @@ objectiveFunctionFreeConstraintsAndCollision(
     std::cout << std::endl;
   }
 
+  bool is_collision;
   std::vector<Eigen::VectorXd> grad_d, grad_c, grad_sc;
   grad_d.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
   grad_c.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
@@ -1012,7 +1013,7 @@ objectiveFunctionFreeConstraintsAndCollision(
     J_d = optimization_data->getCostAndGradientDerivative(
             &grad_d, optimization_data);
     J_c = optimization_data->getCostAndGradientCollision(
-            &grad_c, optimization_data);
+            &grad_c, optimization_data, &is_collision);
     if (optimization_data->optimization_parameters_.use_soft_constraints) {
       J_sc = optimization_data->getCostAndGradientSoftConstraints(
               &grad_sc, optimization_data);
@@ -1021,7 +1022,7 @@ objectiveFunctionFreeConstraintsAndCollision(
     J_d = optimization_data->getCostAndGradientDerivative(
             NULL, optimization_data);
     J_c = optimization_data->getCostAndGradientCollision(
-            NULL, optimization_data);
+            NULL, optimization_data, &is_collision);
     if (optimization_data->optimization_parameters_.use_soft_constraints) {
       J_sc = optimization_data->getCostAndGradientSoftConstraints(
               NULL, optimization_data);
@@ -1166,6 +1167,7 @@ double PolynomialOptimizationNonLinear<_N
     std::cout << std::endl;
   }
 
+  bool is_collision;
   std::vector<Eigen::VectorXd> grad_d, grad_c, grad_sc;
   std::vector<double> grad_t(n_segments);
   grad_d.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
@@ -1179,7 +1181,7 @@ double PolynomialOptimizationNonLinear<_N
     J_d = optimization_data->getCostAndGradientDerivative(
             &grad_d, optimization_data);
     J_c = optimization_data->getCostAndGradientCollision(
-            &grad_c, optimization_data);
+            &grad_c, optimization_data, &is_collision);
     J_t = optimization_data->getCostAndGradientTime(&grad_t, optimization_data);
     if (optimization_data->optimization_parameters_.use_soft_constraints) {
       J_sc = optimization_data->getCostAndGradientSoftConstraints(
@@ -1189,7 +1191,7 @@ double PolynomialOptimizationNonLinear<_N
     J_d = optimization_data->getCostAndGradientDerivative(
             NULL, optimization_data);
     J_c = optimization_data->getCostAndGradientCollision(
-            NULL, optimization_data);
+            NULL, optimization_data, &is_collision);
     J_t = optimization_data->getCostAndGradientTime(NULL, optimization_data);
     if (optimization_data->optimization_parameters_.use_soft_constraints) {
       J_sc = optimization_data->getCostAndGradientSoftConstraints(
@@ -1407,7 +1409,8 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientDerivative(
 
 template <int _N>
 double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
-        std::vector<Eigen::VectorXd>* gradients, void* opt_data) {
+        std::vector<Eigen::VectorXd>* gradients, void* opt_data,
+        bool* is_collision) {
   CHECK_NOTNULL(opt_data);
 
   PolynomialOptimizationNonLinear<N>* data =
@@ -1449,6 +1452,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
           data->L_.block(0, n_fixed_constraints,
                          data->L_.rows(), n_free_constraints);
 
+  *is_collision = false;
   double dt = 0.1; // TODO: parameterize
   double dist_sum_limit = data->optimization_parameters_.map_resolution;
 
@@ -1503,13 +1507,17 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
       if (dist_sum < dist_sum_limit) { continue; }
 
       // Cost and gradient of potential map from esdf
+      bool is_pos_collision;
       Eigen::VectorXd grad_c_d_f(dim); // dc/dd_f
       double c = 0.0;
       if (gradients != NULL) {
-        c = getCostAndGradientPotentialESDF(pos, &grad_c_d_f, data);
+        c = getCostAndGradientPotentialESDF(pos, &grad_c_d_f, data,
+                                            &is_pos_collision);
       } else {
-        c = getCostAndGradientPotentialESDF(pos, NULL, data);
+        c = getCostAndGradientPotentialESDF(pos, NULL, data, &is_pos_collision);
       }
+
+      if (is_pos_collision) { *is_collision = true; }
 
       // Cost per segment and time sample
       double J_c_i_t = c * vel.norm() * time_sum;
@@ -1526,10 +1534,11 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
           increment.setZero();
           increment[k] = increment_dist;
 
+          bool is_collision_left, is_collision_right;
           double cost_left = getCostAndGradientPotentialESDF(
-                  pos - increment, NULL, data);
+                  pos - increment, NULL, data, &is_collision_left);
           double cost_right = getCostAndGradientPotentialESDF(
-                  pos + increment, NULL, data);
+                  pos + increment, NULL, data, &is_collision_right);
           grad_c_k_num[k] += (cost_right - cost_left) / (2.0 * increment_dist);
 
 //          if (data->optimization_parameters_.print_debug_info) {
@@ -1594,7 +1603,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
 template <int _N>
 double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
         const Eigen::VectorXd& position, Eigen::VectorXd* gradient,
-        void* opt_data) {
+        void* opt_data, bool* is_collision) {
   CHECK_NOTNULL(opt_data);
 
   PolynomialOptimizationNonLinear<N>* data =
@@ -1625,7 +1634,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
   }
 
   // Get potential cost from distance to collision
-  double J_c_esdf = data->getCostPotential(distance);
+  double J_c_esdf = data->getCostPotential(distance, is_collision);
 
   if (gradient != NULL) {
     // Numerical gradients
@@ -1647,8 +1656,10 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
         right_dist = data->sdf_->Get3d(position+increment);
       }
 
-      double left_cost = data->getCostPotential(left_dist);
-      double right_cost = data->getCostPotential(right_dist);
+      bool is_collision_left, is_collision_right;
+      double left_cost = data->getCostPotential(left_dist, &is_collision_left);
+      double right_cost = data->getCostPotential(right_dist,
+                                                 &is_collision_right);
 
       grad_c_potential[k] = (right_cost - left_cost) / (2.0 * increment_dist);
     }
@@ -1772,13 +1783,16 @@ void PolynomialOptimizationNonLinear<_N>::getNumericalGradientsCollision(
         free_constraints_left[k2] = free_constraints[k2] - increment[k2];
       }
       data->poly_opt_.setFreeConstraints(free_constraints_left);
-      double cost_left = data->getCostAndGradientCollision(NULL, data);
+      bool is_collision_left, is_collision_right;
+      double cost_left = data->getCostAndGradientCollision(NULL, data,
+                                                           &is_collision_left);
 
       for (int k2 = 0; k2 < dim; ++k2) {
         free_constraints_right[k2] = free_constraints[k2] + increment[k2];
       }
       data->poly_opt_.setFreeConstraints(free_constraints_right);
-      double cost_right = data->getCostAndGradientCollision(NULL, data);
+      double cost_right = data->getCostAndGradientCollision(NULL, data,
+                                                            &is_collision_right);
 
       double grad_k_n = (cost_right - cost_left) / (2.0 * increment_dist);
       gradients_num->at(k)[n] = grad_k_n;
@@ -1958,6 +1972,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
       data->poly_opt_.updateSegmentTimes(segment_times_smaller);
 
       // Calculate cost and gradient with new segment time
+      bool is_collision_smaller;
       std::vector<Eigen::VectorXd> grad_d_smaller, grad_c_smaller,
               grad_sc_smaller;
       grad_d_smaller.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
@@ -1966,7 +1981,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
       double J_d_smaller = data->getCostAndGradientDerivative(
               &grad_d_smaller, data);
       double J_c_smaller = data->getCostAndGradientCollision(
-              &grad_c_smaller, data);
+              &grad_c_smaller, data, &is_collision_smaller);
       double J_sc_smaller = 0.0;
       if (data->optimization_parameters_.use_soft_constraints) {
         J_sc_smaller = data->getCostAndGradientSoftConstraints(
@@ -1989,6 +2004,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
       data->poly_opt_.updateSegmentTimes(segment_times_bigger);
 
       // Calculate cost and gradient with new segment time
+      bool is_collision_bigger;
       std::vector<Eigen::VectorXd> grad_d_bigger, grad_c_bigger, grad_sc_bigger;
       grad_d_bigger.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
       grad_c_bigger.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
@@ -1996,7 +2012,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
       double J_d_bigger = data->getCostAndGradientDerivative(
               &grad_d_bigger, data);
       double J_c_bigger = data->getCostAndGradientCollision(
-              &grad_c_bigger, data);
+              &grad_c_bigger, data, &is_collision_bigger);
       double J_sc_bigger = 0.0;
       if (data->optimization_parameters_.use_soft_constraints) {
         J_sc_bigger = data->getCostAndGradientSoftConstraints(
@@ -2026,7 +2042,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
 
 template <int _N>
 double PolynomialOptimizationNonLinear<_N>::getCostPotential(
-        double collision_distance) {
+        double collision_distance, bool* is_collision) {
 
   // Get parameter
   const double epsilon = optimization_parameters_.epsilon;
@@ -2034,11 +2050,13 @@ double PolynomialOptimizationNonLinear<_N>::getCostPotential(
   const double collision_potential_multiplier =
           optimization_parameters_.coll_pot_multiplier;
 
+  *is_collision = false;
   double cost = 0.0;
   collision_distance -= robot_radius;
   if (collision_distance < 0.0) {
 //    cost = -collision_distance + 0.5 * epsilon;
     cost = collision_potential_multiplier*(-collision_distance) + 0.5 * epsilon;
+    *is_collision = true;
   } else if (collision_distance <= epsilon) {
     double epsilon_distance = collision_distance - epsilon;
     cost = 0.5 * 1.0 / epsilon * epsilon_distance * epsilon_distance;
