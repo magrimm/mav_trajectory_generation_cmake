@@ -1972,7 +1972,6 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
     // Initialize changed segment times for numerical derivative
     std::vector<double> segment_times_smaller(n_segments);
     std::vector<double> segment_times_bigger(n_segments);
-
     double increment_time = data->optimization_parameters_.increment_time; //[s]
     for (int n = 0; n < n_segments; ++n) {
       // Calculate cost with lower segment time
@@ -1986,19 +1985,12 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
 
       // Calculate cost and gradient with new segment time
       bool is_collision_smaller;
-      std::vector<Eigen::VectorXd> grad_d_smaller, grad_c_smaller,
-              grad_sc_smaller;
-      grad_d_smaller.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
-      grad_c_smaller.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
-      grad_sc_smaller.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
-      double J_d_smaller = data->getCostAndGradientDerivative(
-              &grad_d_smaller, data);
+      double J_d_smaller = data->getCostAndGradientDerivative(NULL, data);
       double J_c_smaller = data->getCostAndGradientCollision(
-              &grad_c_smaller, data, &is_collision_smaller);
+              NULL, data, &is_collision_smaller);
       double J_sc_smaller = 0.0;
       if (data->optimization_parameters_.use_soft_constraints) {
-        J_sc_smaller = data->getCostAndGradientSoftConstraints(
-                &grad_sc_smaller, data);
+        J_sc_smaller = data->getCostAndGradientSoftConstraints(NULL, data);
       }
       double total_time_left =
               computeTotalTrajectoryTime(segment_times_smaller);
@@ -2018,18 +2010,12 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
 
       // Calculate cost and gradient with new segment time
       bool is_collision_bigger;
-      std::vector<Eigen::VectorXd> grad_d_bigger, grad_c_bigger, grad_sc_bigger;
-      grad_d_bigger.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
-      grad_c_bigger.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
-      grad_sc_bigger.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
-      double J_d_bigger = data->getCostAndGradientDerivative(
-              &grad_d_bigger, data);
+      double J_d_bigger = data->getCostAndGradientDerivative(NULL, data);
       double J_c_bigger = data->getCostAndGradientCollision(
-              &grad_c_bigger, data, &is_collision_bigger);
+              NULL, data, &is_collision_bigger);
       double J_sc_bigger = 0.0;
       if (data->optimization_parameters_.use_soft_constraints) {
-        J_sc_bigger = data->getCostAndGradientSoftConstraints(
-                &grad_sc_bigger, data);
+        J_sc_bigger = data->getCostAndGradientSoftConstraints(NULL, data);
       }
       double total_time_right =
               computeTotalTrajectoryTime(segment_times_bigger);
@@ -2048,7 +2034,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
 
   // Compute cost without gradient (only time)
   double total_time = computeTotalTrajectoryTime(segment_times);
-  double J_t = total_time;  // TODO: squared?
+  double J_t = total_time;  // TODO: squared? if yes, adjust dJt_dt = 2t
 
   return J_t;
 }
