@@ -2221,6 +2221,15 @@ calculatePolynomialDerivativeMappingMatrices() {
   for (int i = 0; i < Snap_.diagonal(4).size(); ++i) {
     Snap_.diagonal(4)(i) = (i + 1)*(i + 2)*(i + 3)*(i + 4);
   }
+
+  Snap_all_segments_.resize(n_segments * N, n_segments * N);
+  Snap_all_segments_.setZero();
+  for (int n = 0; n < n_segments; ++n) {
+    for (int i = 0; i < Snap_.diagonal(4).size(); ++i) {
+      const int idx = n * N + i;
+      Snap_all_segments_.diagonal(4)(idx) = (i + 1)*(i + 2)*(i + 3)*(i + 4);
+    }
+  }
 }
 
 template <int _N>
