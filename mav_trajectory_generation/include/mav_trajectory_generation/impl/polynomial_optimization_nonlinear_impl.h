@@ -2294,7 +2294,7 @@ void PolynomialOptimizationNonLinear<_N>::printMatlabSampledTrajectory(
   const int n_free = poly_opt_.getNumberFreeConstraints();
 
   // Allocate some size of p vector.
-  double dt = 0.01;
+  double dt = 0.01; // TODO: parameterize
 
   std::vector<double> segment_times;
   poly_opt_.getSegmentTimes(&segment_times);
