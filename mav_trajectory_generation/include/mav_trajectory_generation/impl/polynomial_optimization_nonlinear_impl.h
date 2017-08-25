@@ -774,11 +774,11 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionTime(
   optimization_data->poly_opt_.solveLinear();
 
   const double cost_trajectory = optimization_data->poly_opt_.computeCost();
-  double cost_constraints = 0.0;
   const double total_time = computeTotalTrajectoryTime(segment_times);
   const double cost_time = total_time * total_time *
           optimization_data->optimization_parameters_.time_penalty;
 
+  double cost_constraints = 0.0;
   if (optimization_data->optimization_parameters_.use_soft_constraints) {
     cost_constraints =
         optimization_data->evaluateMaximumMagnitudeAsSoftConstraint(
