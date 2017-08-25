@@ -252,6 +252,18 @@ int PolynomialOptimizationNonLinear<_N>::optimizeTime() {
     upper_bounds.push_back(t * 2.0);
   }
 
+  // TODO: no need to calculate twice. Calculate in comptueIntitialSol...
+  // Calculate L
+  Eigen::MatrixXd M, A_inv;
+  poly_opt_.getM(&M);
+  poly_opt_.getAInverse(&A_inv);
+
+  L_ = Eigen::MatrixXd(A_inv * M);
+
+  // Calculate matrix for mapping vector of polynomial coefficients of a
+  // function to the polynomial coefficients of its derivative.
+  calculatePolynomialDerivativeMappingMatrices();
+
   try {
     // Set a lower bound on the segment time per segment to avoid numerical
     // issues.
@@ -507,6 +519,18 @@ int PolynomialOptimizationNonLinear<_N>::optimizeTimeAndFreeConstraints() {
   initial_step.reserve(n_optmization_variables);
   lower_bounds.reserve(n_optmization_variables);
   upper_bounds.reserve(n_optmization_variables);
+
+  // TODO: no need to calculate twice. Calculate in comptueIntitialSol...
+  // Calculate L
+  Eigen::MatrixXd M, A_inv;
+  poly_opt_.getM(&M);
+  poly_opt_.getAInverse(&A_inv);
+
+  L_ = Eigen::MatrixXd(A_inv * M);
+
+  // Calculate matrix for mapping vector of polynomial coefficients of a
+  // function to the polynomial coefficients of its derivative.
+  calculatePolynomialDerivativeMappingMatrices();
 
   // copy all constraints into one vector:
   for (double t : segment_times) {
