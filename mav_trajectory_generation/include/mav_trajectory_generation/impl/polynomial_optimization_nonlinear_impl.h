@@ -125,9 +125,6 @@ bool PolynomialOptimizationNonLinear<_N
   // Get dimension
   const size_t dim = poly_opt_.getDimension();
 
-  // Parameters before removing constraints
-  const size_t n_free_constraints = poly_opt_.getNumberFreeConstraints();
-  const size_t n_fixed_constraints = poly_opt_.getNumberFixedConstraints();
   // 2) Get the coefficients from the segments
   mav_trajectory_generation::Segment::Vector segments;
   poly_opt_.getSegments(&segments);
@@ -156,9 +153,10 @@ bool PolynomialOptimizationNonLinear<_N
   // Save initial segment time
   trajectory_time_initial_ = computeTotalTrajectoryTime(segment_times);
 
-  // Parameters after removing constraints // TODO: test if needed and true
-  const size_t n_free_constraints_after = poly_opt_.getNumberFreeConstraints();
-  const size_t n_fixed_constraints_after = poly_opt_.getNumberFixedConstraints();
+  // Parameters after removing constraints
+  const size_t n_free_constraints = poly_opt_.getNumberFreeConstraints();
+  const size_t n_fixed_constraints = poly_opt_.getNumberFixedConstraints();
+
   // TODO: move to linear solver. add method setFreeConstraintsFromCoefficients
   // 5) Get your new mapping matrix L (p = L*[d_f d_P]^T = A^(-1)*M*[d_f d_P]^T)
   // Fixed constraints are the same except plus the position constraints we
@@ -172,10 +170,10 @@ bool PolynomialOptimizationNonLinear<_N
   // L the new remapping matrix
   // d_all has the same size before and after removing constraints
   Eigen::VectorXd d_all(n_fixed_constraints + n_free_constraints);
-  std::vector<Eigen::VectorXd> d_p(dim, Eigen::VectorXd(n_free_constraints_after));
+  std::vector<Eigen::VectorXd> d_p(dim, Eigen::VectorXd(n_free_constraints));
   for (int i = 0; i < dim; ++i) {
     d_all = M_pinv * A * p[i]; // Old coeff p, but new ordering M_pinv * A
-    d_p[i] = d_all.tail(n_free_constraints_after);
+    d_p[i] = d_all.tail(n_free_constraints);
   }
 
   // 7) Set free constraints of problem according to initial solution and
@@ -230,6 +228,7 @@ template <int _N>
 int PolynomialOptimizationNonLinear<_N>::optimizeTime() {
   std::vector<double> initial_step, segment_times, upper_bounds;
 
+  // Retrieve the segment times
   poly_opt_.getSegmentTimes(&segment_times);
   const size_t n_segments = segment_times.size();
 
@@ -248,6 +247,7 @@ int PolynomialOptimizationNonLinear<_N>::optimizeTime() {
     initial_step.push_back(optimization_parameters_.initial_stepsize_rel * t);
   }
 
+  // TODO: replace with multiplier
   for (double t : segment_times) {
     upper_bounds.push_back(t * 2.0);
   }
@@ -336,8 +336,6 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraints() {
     const double abs_x = std::abs(x);
     initial_step.push_back(optimization_parameters_.initial_stepsize_rel *
                            abs_x);
-//    lower_bounds.push_back(-abs_x * 2);
-//    upper_bounds.push_back(abs_x * 2);
   }
 
   setFreeEndpointDerivativeHardConstraints(initial_solution, &lower_bounds,
@@ -363,7 +361,7 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraints() {
   int result;
 
   try {
-    timing::Timer timer_solve("optimize_nonlinear_full_total_time");
+    timing::Timer timer_solve("optimize_nlin_free_constraints");
     result = nlopt_->optimize(initial_solution, final_cost);
     timer_solve.Stop();
   } catch (std::exception& e) {
@@ -483,6 +481,7 @@ int PolynomialOptimizationNonLinear<_N>::optimizeTimeAndFreeConstraints() {
   std::vector<double> initial_step, initial_solution, segment_times,
       lower_bounds, upper_bounds;
 
+  // Get the segment times
   poly_opt_.getSegmentTimes(&segment_times);
   const size_t n_segments = segment_times.size();
 
@@ -553,7 +552,7 @@ int PolynomialOptimizationNonLinear<_N>::optimizeTimeAndFreeConstraints() {
   int result;
 
   try {
-    timing::Timer timer_solve("optimize_nonlinear_full_total_time");
+    timing::Timer timer_solve("optimize_nlin_time_and_constraints");
     result = nlopt_->optimize(initial_solution, final_cost);
     timer_solve.Stop();
   } catch (std::exception& e) {
@@ -749,20 +748,12 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionTime(
 
   optimization_data->poly_opt_.updateSegmentTimes(segment_times);
   optimization_data->poly_opt_.solveLinear();
-  double cost_trajectory = optimization_data->poly_opt_.computeCost();
-  double cost_time = 0;
-  double cost_constraints = 0;
-  const double total_time = computeTotalTrajectoryTime(segment_times);
-  cost_time = total_time * total_time *
-              optimization_data->optimization_parameters_.time_penalty;
 
-  if (optimization_data->optimization_parameters_.print_debug_info) {
-    std::cout << "---- cost at iteration "
-              << optimization_data->optimization_info_.n_iterations << "---- "
-              << std::endl;
-    std::cout << "  trajectory: " << cost_trajectory << std::endl;
-    std::cout << "  time: " << cost_time << std::endl;
-  }
+  const double cost_trajectory = optimization_data->poly_opt_.computeCost();
+  double cost_constraints = 0.0;
+  const double total_time = computeTotalTrajectoryTime(segment_times);
+  const double cost_time = total_time * total_time *
+          optimization_data->optimization_parameters_.time_penalty;
 
   if (optimization_data->optimization_parameters_.use_soft_constraints) {
     cost_constraints =
@@ -771,7 +762,14 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionTime(
             optimization_data->optimization_parameters_.soft_constraint_weight);
   }
 
+
   if (optimization_data->optimization_parameters_.print_debug_info) {
+    std::cout << "---- cost at iteration "
+              << optimization_data->optimization_info_.n_iterations << "---- "
+              << std::endl;
+    std::cout << "  trajectory: " << cost_trajectory << std::endl;
+    std::cout << "  time: " << cost_time << std::endl;
+    std::cout << "  constraints: " << cost_constraints << std::endl;
     std::cout << "  sum: " << cost_trajectory + cost_time + cost_constraints
               << std::endl;
     std::cout << "  total time: " << total_time << std::endl;
@@ -803,13 +801,14 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionTimeAndConstraints(
 
   CHECK_EQ(x.size(), n_segments + n_free_constraints * dim);
 
-  std::vector<Eigen::VectorXd> free_constraints;
-  free_constraints.resize(dim);
+  // Retrieve segment times
   std::vector<double> segment_times;
   segment_times.reserve(n_segments);
-
   for (size_t i = 0; i < n_segments; ++i) segment_times.push_back(x[i]);
 
+  // Retrieve free endpoint-derivative constraints
+  std::vector<Eigen::VectorXd> free_constraints;
+  free_constraints.resize(dim);
   for (size_t d = 0; d < dim; ++d) {
     const size_t idx_start = n_segments + d * n_free_constraints;
 
@@ -873,9 +872,9 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraints(
 
   CHECK_EQ(x.size(), n_free_constraints * dim);
 
+  // Retrieve free endpoint-derivative constraints
   std::vector<Eigen::VectorXd> free_constraints;
   free_constraints.resize(dim);
-
   for (size_t d = 0; d < dim; ++d) {
     const size_t idx_start = d * n_free_constraints;
 
@@ -904,6 +903,7 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraints(
   }
 
   std::vector<Eigen::VectorXd> grad_d;
+  grad_d.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
   double J_d = 0.0;
   if (!gradient.empty()) {
     J_d = optimization_data->getCostAndGradientDerivative(
@@ -913,9 +913,8 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraints(
             NULL, optimization_data);
   }
 
-  // TODO: get rid after testing
   double cost_trajectory = J_d;
-  double cost_time = 0.0;
+  // TODO: get and multiply with weights
   double cost_constraints = 0.0;
 
   if (optimization_data->optimization_parameters_.use_soft_constraints) {
@@ -930,15 +929,12 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraints(
               << optimization_data->optimization_info_.n_iterations << "---- "
               << std::endl;
     std::cout << "  trajectory: " << cost_trajectory << std::endl;
-    std::cout << "  time: " << cost_time << std::endl;
     std::cout << "  constraints: " << cost_constraints << std::endl;
-    std::cout << "  sum: " << cost_trajectory + cost_time + cost_constraints
-              << std::endl;
+    std::cout << "  sum: " << cost_trajectory + cost_constraints << std::endl;
   }
 
   optimization_data->optimization_info_.n_iterations++;
   optimization_data->optimization_info_.cost_trajectory = cost_trajectory;
-  optimization_data->optimization_info_.cost_time = cost_time;
   optimization_data->optimization_info_.cost_soft_constraints =
           cost_constraints;
 
@@ -953,7 +949,7 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionFreeConstraints(
     }
   }
 
-  return cost_trajectory + cost_time + cost_constraints;
+  return cost_trajectory + cost_constraints;
 }
 
 template <int _N>
@@ -971,9 +967,9 @@ objectiveFunctionFreeConstraintsAndCollision(
 
   CHECK_EQ(x.size(), n_free_constraints * dim);
 
+  // Retrieve the free endpoint-derivative constraints
   std::vector<Eigen::VectorXd> free_constraints;
   free_constraints.resize(dim);
-
   for (size_t d = 0; d < dim; ++d) {
     const size_t idx_start = d * n_free_constraints;
 
@@ -1109,7 +1105,6 @@ objectiveFunctionFreeConstraintsAndCollision(
     }
   }
 
-  // TODO: Clean not needed terms (ie cost_time) everywhere
   return cost_trajectory + cost_collision + cost_constraints;
 }
 
@@ -1129,15 +1124,14 @@ double PolynomialOptimizationNonLinear<_N
 
   CHECK_EQ(x.size(), n_segments + n_free_constraints * dim);
 
-  std::vector<Eigen::VectorXd> free_constraints;
-  free_constraints.resize(dim);
+  // Retrieve optimized segment times
   std::vector<double> segment_times;
   segment_times.reserve(n_segments);
-
-  // Retrieve optimized segment times
   for (size_t i = 0; i < n_segments; ++i) segment_times.push_back(x[i]);
 
   // Retrieve optimized free endpoint-derivatives
+  std::vector<Eigen::VectorXd> free_constraints;
+  free_constraints.resize(dim);
   for (size_t d = 0; d < dim; ++d) {
     const size_t idx_start = n_segments + d * n_free_constraints;
 
@@ -1349,33 +1343,28 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientDerivative(
   PolynomialOptimizationNonLinear<N>* data =
           static_cast<PolynomialOptimizationNonLinear<N>*>(opt_data);
 
-  Eigen::MatrixXd R;
-  data->poly_opt_.getR(&R);
-
-  // Compare the two approaches:
-  // getCost() and the full matrix.
-//  const size_t n_segments = data->poly_opt_.getNumberSegments();
+  // Compare the two approaches: getCost() and the full matrix.
   const size_t n_free_constraints = data->poly_opt_.getNumberFreeConstraints();
   const size_t n_fixed_constraints = data->poly_opt_.getNumberFixedConstraints();
   const size_t dim = data->poly_opt_.getDimension();
 
   double J_d = 0.0;
-  std::vector<Eigen::VectorXd> grad_d(dim, Eigen::VectorXd::Zero(n_free_constraints));
+  std::vector<Eigen::VectorXd> grad_d(
+          dim, Eigen::VectorXd::Zero(n_free_constraints));
+
+  // Retrieve R
+  Eigen::MatrixXd R;
+  data->poly_opt_.getR(&R);
 
   // Set up mappings to R_FF R_FP R_PP etc. R_FP' = R_PF if that saves
   // time eventually.
   // All of these are the same per axis.
-  // Not sure if there's a boost from the sparse solver? Our problems are tiny
-  // so I guess not.
-
   // R_ff * d_f is actually constant so can cache this term.
   Eigen::Block<Eigen::MatrixXd> R_ff =
           R.block(0, 0, n_fixed_constraints, n_fixed_constraints);
-
   Eigen::Block<Eigen::MatrixXd> R_pf =
           R.block(n_fixed_constraints, 0, n_free_constraints,
                    n_fixed_constraints);
-
   Eigen::Block<Eigen::MatrixXd> R_pp =
           R.block(n_fixed_constraints, n_fixed_constraints, n_free_constraints,
                    n_free_constraints);
@@ -1383,9 +1372,6 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientDerivative(
   // Get d_p and d_f vector for all axes.
   std::vector<Eigen::VectorXd> d_p_vec;
   std::vector<Eigen::VectorXd> d_f_vec;
-
-  // Figure out if we should have polyopt keep track of d_ps
-  // or us keep track of d_ps over iterations.
   data->poly_opt_.getFreeConstraints(&d_p_vec);
   data->poly_opt_.getFixedConstraints(&d_f_vec);
 
@@ -1440,8 +1426,6 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
   std::vector<Eigen::VectorXd> grad_c(dim, Eigen::VectorXd::Zero(n_free_constraints));
 
   // Get d_p and d_f vector for all axes.
-  // Figure out if we should have polyopt keep track of d_ps
-  // or us keep track of d_ps over iterations.
   std::vector<Eigen::VectorXd> d_p_vec, d_f_vec;
   data->poly_opt_.getFreeConstraints(&d_p_vec);
   data->poly_opt_.getFixedConstraints(&d_f_vec);
@@ -1457,6 +1441,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
     p_all_segments[k] = data->L_ * d_all_segments;
   }
 
+  // Retrieve segment times
   std::vector<double> segment_times;
   data->poly_opt_.getSegmentTimes(&segment_times);
 
@@ -1553,12 +1538,6 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
           double cost_right = getCostAndGradientPotentialESDF(
                   pos + increment, NULL, data, &is_collision_right);
           grad_c_k_num[k] += (cost_right - cost_left) / (2.0 * increment_dist);
-
-//          if (data->optimization_parameters_.print_debug_info) {
-//            std::cout << "grad_c_k_num[" << k << "]: " << grad_c_k_num[k]
-//                      << " = (" << cost_right << " - " << cost_left
-//                      << ") / (2.0 * " << increment_dist << ")" << std::endl;
-//          }
         }
 
         if (gradients != NULL) {
@@ -1625,7 +1604,6 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
   Eigen::Vector3d min_bound = data->optimization_parameters_.min_bound;
   Eigen::Vector3d max_bound = data->optimization_parameters_.max_bound;
 
-  // TODO: if this still needed?
   // TODO: How to make sure trajectory stays within bounds?
   bool is_valid_state = true;
   double increment_dist = data->optimization_parameters_.map_resolution;
@@ -1784,11 +1762,10 @@ void PolynomialOptimizationNonLinear<_N>::getNumericalGradientsCollision(
   std::vector<Eigen::VectorXd> increment(dim, Eigen::VectorXd::Zero
           (n_free_constraints));
   for (int k = 0; k < dim; ++k) {
-
     increment.clear();
     increment.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
-    for (int n = 0; n < n_free_constraints; ++n) {
 
+    for (int n = 0; n < n_free_constraints; ++n) {
       increment[k].setZero();
       increment[k][n] = increment_dist;
 
@@ -1842,8 +1819,8 @@ void PolynomialOptimizationNonLinear<_N>::getNumericalGradDerivatives(
   free_constraints_right.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
   double increment_dist = data->optimization_parameters_.map_resolution;
 
-  std::vector<Eigen::VectorXd> increment(dim, Eigen::VectorXd::Zero
-          (n_free_constraints));
+  std::vector<Eigen::VectorXd> increment(
+          dim, Eigen::VectorXd::Zero(n_free_constraints));
   for (int k = 0; k < dim; ++k) {
 
     increment.clear();
@@ -1903,11 +1880,10 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientSoftConstraints(
     std::vector<Eigen::VectorXd> increment(dim, Eigen::VectorXd::Zero
             (n_free_constraints));
     for (int k = 0; k < dim; ++k) {
-
       increment.clear();
       increment.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
-      for (int n = 0; n < n_free_constraints; ++n) {
 
+      for (int n = 0; n < n_free_constraints; ++n) {
         increment[k].setZero();
         increment[k][n] = increment_dist;
 
@@ -2244,9 +2220,6 @@ setFreeEndpointDerivativeHardConstraints(
   if (optimization_parameters_.set_bounds_with_constraints) {
     LOG(INFO) << "USE HARD CONSTRAINTS FOR ENDPOINT DERIVATIVE BOUNDARIES";
 
-//    lower_bounds = std::vector<double>(n_optmization_variables, -HUGE_VAL);
-//    upper_bounds = std::vector<double>(n_optmization_variables, HUGE_VAL);
-
     for (double x : initial_solution) {
       const double abs_x = std::abs(x);
       lower_bounds->push_back(-abs_x * multiplier);
@@ -2331,11 +2304,7 @@ void PolynomialOptimizationNonLinear<_N>::printMatlabSampledTrajectory(
     p_vec[k] = L_ * d_all;
   }
 
-  // Layout: [t, x, y, z...]
-//  Eigen::MatrixXd output(total_samples, dimension_ + 1);
-//  Eigen::MatrixXd output(total_samples, 2*dimension_ + 1);
-//  Eigen::MatrixXd output(total_samples, 3*dimension_ + 1);
-//  Eigen::MatrixXd output(total_samples, 4*dimension_ + 1);
+  // Layout: [t, x, y, z, vx, vy, vz, jx, jy, jz, sx, sy, sz]
   Eigen::MatrixXd output(total_samples, 5*dimension_ + 1);
   output.setZero();
   int j = 0;
