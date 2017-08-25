@@ -796,6 +796,8 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionTime(
     std::cout << "  constraints: " << cost_constraints << std::endl;
     std::cout << "  sum: " << cost_trajectory + cost_time + cost_constraints
               << std::endl;
+    std::cout << "  sum iter0: " << optimization_data->total_cost_iter0_
+              << std::endl;
     std::cout << "  total time: " << total_time << std::endl;
   }
 
@@ -805,7 +807,14 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionTime(
   optimization_data->optimization_info_.cost_soft_constraints =
       cost_constraints;
 
-  return cost_trajectory + cost_time + cost_constraints;
+  // Save the total cost at iteration 0
+  if (optimization_data->is_iter0_) {
+    optimization_data->total_cost_iter0_ =
+            cost_trajectory + cost_collision + cost_time + cost_constraints;
+    optimization_data->is_iter0_ = false;
+  }
+
+  return cost_trajectory + cost_collision + cost_time + cost_constraints;
 }
 
 template <int _N>
