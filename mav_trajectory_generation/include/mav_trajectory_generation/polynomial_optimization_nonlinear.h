@@ -333,6 +333,8 @@ class PolynomialOptimizationNonLinear {
   // 7) Set the new free endpoint-derivatives d_p back in the linear solver.
   bool computeInitialSolutionWithoutPositionConstraints();
 
+  // Print the trajectory in
+  // format [t, x, y, z, vx, vy, vz, jx, jy, jz, sx, sy, sz] to a file
   void printMatlabSampledTrajectory(const std::string& file) const;
 
  private:
@@ -509,17 +511,22 @@ class PolynomialOptimizationNonLinear {
   static double computeTotalTrajectoryTime(
       const std::vector<double>& segment_times);
 
+  // Linear interpolation
   double lerp(double x, double x1, double x2, double q00, double q01);
+  // Bilinear interpolation (3x linear interpolation)
   double biLerp(double x, double y, double q11, double q12, double q21,
                 double q22, double x1, double x2, double y1, double y2);
+  // Trilinear interpolation (7x linear interpolation)
   double triLerp(double x, double y, double z, double q000, double q001,
                  double q010, double q011, double q100, double q101,
                  double q110, double q111, double x1, double x2, double y1,
                  double y2, double z1, double z2);
 
+  // Get sdf values of 8 corner neighbours
   std::vector<std::pair<float, bool>> getNeighborsSDF(
           const std::vector<int64_t>& idx,
           const std::shared_ptr<sdf_tools::SignedDistanceField>& sdf);
+  // Get the distance of from the sdf with trilinear interpolation
   double getDistanceSDF(
           const Eigen::Vector3d& position,
           const std::shared_ptr<sdf_tools::SignedDistanceField>& sdf);
@@ -533,6 +540,7 @@ class PolynomialOptimizationNonLinear {
   // [  ...   ...  ]            --> df_k(t)/dt = T * V * p_k
   void calculatePolynomialDerivativeMappingMatrices();
 
+  // Set lower and upper bounds on the optimization parameters
   void setFreeEndpointDerivativeHardConstraints(
           const std::vector<double>& initial_solution,
           std::vector<double>* lower_bounds, std::vector<double>* upper_bounds);
