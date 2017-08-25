@@ -447,18 +447,20 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
   for (double x : initial_solution) {
     const double abs_x = std::abs(x);
     initial_step.push_back(optimization_parameters_.initial_stepsize_rel *
-                           abs_x);
+                                   abs_x);
   }
 
-  std::cout << "NLOPT X BOUNDS: LOWER | UPPER || INITIAL SOL || INITIAL STEP"
-            << std::endl;
-  for (int j = 0; j < lower_bounds.size(); ++j) {
-    std::cout << j << ": " << lower_bounds[j] << " | "
-              << upper_bounds[j] << " || "
-              << initial_solution[j] << " || "
-              << initial_step[j] << std::endl;
+  if (optimization_parameters_.print_debug_info) {
+    std::cout << "NLOPT X BOUNDS: LOWER | UPPER || INITIAL SOL || INITIAL STEP"
+              << std::endl;
+    for (int j = 0; j < lower_bounds.size(); ++j) {
+      std::cout << j << ": " << lower_bounds[j] << " | "
+                << upper_bounds[j] << " || "
+                << initial_solution[j] << " || "
+                << initial_step[j] << std::endl;
+    }
+    std::cout << std::endl;
   }
-  std::cout << std::endl;
 
   try {
     nlopt_->set_initial_step(initial_step);
@@ -1457,8 +1459,6 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
   PolynomialOptimizationNonLinear<N>* data =
           static_cast<PolynomialOptimizationNonLinear<N>*>(opt_data);
 
-  // Compare the two approaches:
-  // getCost() and the full matrix.
   const size_t n_segments = data->poly_opt_.getNumberSegments();
   const size_t n_free_constraints = data->poly_opt_.getNumberFreeConstraints();
   const size_t n_fixed_constraints = data->poly_opt_.getNumberFixedConstraints();
