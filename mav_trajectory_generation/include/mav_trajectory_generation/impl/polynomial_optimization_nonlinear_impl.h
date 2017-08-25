@@ -778,6 +778,14 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionTime(
   const double cost_time = total_time * total_time *
           optimization_data->optimization_parameters_.time_penalty;
 
+  bool is_collision = false;
+  double cost_collision = 0.0;
+  const double w_c = optimization_data->optimization_parameters_.weights.w_c;
+  if (w_c > 0.0) {
+    cost_collision = w_c * optimization_data->getCostAndGradientCollision(
+            NULL, optimization_data, &is_collision);
+  }
+
   double cost_constraints = 0.0;
   if (optimization_data->optimization_parameters_.use_soft_constraints) {
     cost_constraints =
@@ -786,12 +794,12 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionTime(
             optimization_data->optimization_parameters_.soft_constraint_weight);
   }
 
-
   if (optimization_data->optimization_parameters_.print_debug_info) {
     std::cout << "---- cost at iteration "
               << optimization_data->optimization_info_.n_iterations << "---- "
               << std::endl;
     std::cout << "  trajectory: " << cost_trajectory << std::endl;
+    std::cout << "  collision: " << cost_collision << std::endl;
     std::cout << "  time: " << cost_time << std::endl;
     std::cout << "  constraints: " << cost_constraints << std::endl;
     std::cout << "  sum: " << cost_trajectory + cost_time + cost_constraints
@@ -803,6 +811,7 @@ double PolynomialOptimizationNonLinear<_N>::objectiveFunctionTime(
 
   optimization_data->optimization_info_.n_iterations++;
   optimization_data->optimization_info_.cost_trajectory = cost_trajectory;
+  optimization_data->optimization_info_.cost_collision = cost_collision;
   optimization_data->optimization_info_.cost_time = cost_time;
   optimization_data->optimization_info_.cost_soft_constraints =
       cost_constraints;
