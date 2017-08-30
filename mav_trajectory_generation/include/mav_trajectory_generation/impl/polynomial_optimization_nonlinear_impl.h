@@ -2350,8 +2350,8 @@ void PolynomialOptimizationNonLinear<_N>::printMatlabSampledTrajectory(
     p_vec[k] = L_ * d_all;
   }
 
-  // Layout: [t, x, y, z, vx, vy, vz, jx, jy, jz, sx, sy, sz]
-  Eigen::MatrixXd output(total_samples, 5*dimension_ + 1);
+  // Layout: [t, x, y, z, vx, vy, vz, jx, jy, jz, sx, sy, sz, tm]
+  Eigen::MatrixXd output(total_samples, 5*dimension_ + 2);
   output.setZero();
   int j = 0;
 
@@ -2363,6 +2363,7 @@ void PolynomialOptimizationNonLinear<_N>::printMatlabSampledTrajectory(
       // T is the vector for just THIS SEGMENT.
       Eigen::VectorXd T_seg; // Is supposed to be a column-vector
       T_seg.resize(N);
+      T_seg.setZero();
       for (int n = 0; n < N; ++n) {
         T_seg[n] = pow(t, n);
       }
@@ -2402,6 +2403,7 @@ void PolynomialOptimizationNonLinear<_N>::printMatlabSampledTrajectory(
       }
     }
     current_segment_time += segment_times[i];
+    output(i, 1+5*dimension_) = current_segment_time;
   }
 
   std::fstream fs;
