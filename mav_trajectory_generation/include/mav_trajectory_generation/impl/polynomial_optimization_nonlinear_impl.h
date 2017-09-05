@@ -2262,54 +2262,43 @@ setFreeEndpointDerivativeHardConstraints(
 
   const size_t n_free_constraints = poly_opt_.getNumberFreeConstraints();
 
-  double multiplier = optimization_parameters_.state_bound_multiplicator;
-  if (optimization_parameters_.set_bounds_with_constraints) {
-    LOG(INFO) << "USE HARD CONSTRAINTS FOR ENDPOINT DERIVATIVE BOUNDARIES";
+  LOG(INFO) << "USE HARD CONSTRAINTS FOR ENDPOINT DERIVATIVE BOUNDARIES";
 
-    for (double x : initial_solution) {
-      const double abs_x = std::abs(x);
-      lower_bounds->push_back(-abs_x * multiplier);
-      upper_bounds->push_back(abs_x * multiplier);
-    }
+  // Set all values to -inf/inf and reset only bounded opti param with values
+  for (double x : initial_solution) {
+    lower_bounds->push_back(-HUGE_VAL);
+    upper_bounds->push_back(HUGE_VAL);
+  }
 
-    // Add hard constraints with lower and upper bounds for opti parameters
-    size_t n_segments = poly_opt_.getNumberSegments();
-    for (int k = 0; k < dimension_; ++k) {
-      for (int n = 0; n < n_segments - 1; ++n) {
-        unsigned int start_idx = 0;
-        if (optimization_parameters_.solve_with_position_constraint) {
-          start_idx = k*n_free_constraints + n*derivative_to_optimize_;
-        } else {
-          // Add position constraints given through the map boundaries
-          start_idx = k*n_free_constraints + n*(derivative_to_optimize_ + 1);
+  // Add hard constraints with lower and upper bounds for opti parameters
+  const size_t n_segments = poly_opt_.getNumberSegments();
+  for (int k = 0; k < dimension_; ++k) {
+    for (int n = 0; n < n_segments - 1; ++n) {
+      unsigned int start_idx = 0;
+      if (optimization_parameters_.solve_with_position_constraint) {
+        start_idx = k*n_free_constraints + n*derivative_to_optimize_;
+      } else {
+        // Add position constraints given through the map boundaries
+        start_idx = k*n_free_constraints + n*(derivative_to_optimize_ + 1);
 
-          lower_bounds->at(start_idx) = optimization_parameters_.min_bound[k];
-          upper_bounds->at(start_idx) = optimization_parameters_.max_bound[k];
-        }
-
-        // Add higher order derivative constraints (v_max and a_max)
-        for (const auto& constraint_data : inequality_constraints_) {
-          unsigned int deriv_idx = 0;
-          if (optimization_parameters_.solve_with_position_constraint) {
-            deriv_idx = constraint_data->derivative - 1;
-          } else {
-            deriv_idx = constraint_data->derivative;
-          }
-
-          lower_bounds->at(start_idx + deriv_idx) = -std::abs(
-                  constraint_data->value);
-          upper_bounds->at(start_idx + deriv_idx) = std::abs(
-                  constraint_data->value);
-        }
+        lower_bounds->at(start_idx) = optimization_parameters_.min_bound[k];
+        upper_bounds->at(start_idx) = optimization_parameters_.max_bound[k];
       }
-    }
-  } else {
-    LOG(INFO) << "USE MULTIPLIER FOR ALL BOUNDS";
 
-    for (double x : initial_solution) {
-      const double abs_x = std::abs(x);
-      lower_bounds->push_back(-abs_x * multiplier);
-      upper_bounds->push_back(abs_x * multiplier);
+      // Add higher order derivative constraints (v_max and a_max)
+      for (const auto& constraint_data : inequality_constraints_) {
+        unsigned int deriv_idx = 0;
+        if (optimization_parameters_.solve_with_position_constraint) {
+          deriv_idx = constraint_data->derivative - 1;
+        } else {
+          deriv_idx = constraint_data->derivative;
+        }
+
+        lower_bounds->at(start_idx + deriv_idx) = -std::abs(
+                constraint_data->value);
+        upper_bounds->at(start_idx + deriv_idx) = std::abs(
+                constraint_data->value);
+      }
     }
   }
 }
