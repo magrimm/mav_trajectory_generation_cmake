@@ -1192,9 +1192,16 @@ double PolynomialOptimizationNonLinear<_N
 
   if (optimization_data->optimization_parameters_.print_debug_info) {
     std::cout << "LOWER BOUNDS -- FREE CONSTRAINTS -- UPPER BOUNDS" << std::endl;
+    for (int i = 0; i < segment_times.size(); ++i) {
+      std::cout << "tm_" << i << ": "
+                << optimization_data->lower_bounds_[i] << " | "
+                << segment_times[i] << " | "
+                << optimization_data->upper_bounds_[i] << std::endl;
+    }
+    std::cout << std::endl;
     for (size_t d = 0; d < dim; ++d) {
       for (int i = 0; i < free_constraints[0].size(); ++i) {
-        const size_t idx_start = d * n_free_constraints;
+        const size_t idx_start = n_segments + d * n_free_constraints;
         std::cout << d << " " << i << ": "
                   << optimization_data->lower_bounds_[idx_start+i] << " | "
                   << free_constraints[d][i] << " | "
