@@ -57,14 +57,13 @@ struct NonlinearOptimizationParameters {
         print_debug_info(false),
         objective(kOptimizeFreeConstraintsAndTime),
         weights(),
-        state_bound_multiplicator(2.0),
+        time_bound_multiplicator(2.0),
         map_resolution(0.0),
         min_bound(Eigen::Vector3d::Zero()),
         max_bound(Eigen::Vector3d::Zero()),
         use_numeric_grad(false),
         use_continous_distance(false),
         increment_time(0.1),
-        set_bounds_with_constraints(false),
         epsilon(0.5),
         robot_radius(0.5),
         coll_pot_multiplier(1.0),
@@ -155,7 +154,7 @@ struct NonlinearOptimizationParameters {
   // Used for lower and upper bound. Optimization parameter boundaries
   // regarding positions of the vertices are set directly from the map
   // boundaries.
-  double state_bound_multiplicator;
+  double time_bound_multiplicator;
 
   // Map resolution of the environment
   double map_resolution;
@@ -168,10 +167,6 @@ struct NonlinearOptimizationParameters {
   bool use_numeric_grad;
   bool use_continous_distance;
   double increment_time;
-
-  // Set the bounds of the optimization parameters with the constraints given
-  // (map-->position, v_max, a_max)
-  bool set_bounds_with_constraints;
 
   double epsilon; // Obstacle clearance
   double robot_radius; // bounding box sphere radius

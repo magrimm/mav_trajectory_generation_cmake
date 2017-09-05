@@ -666,7 +666,7 @@ int PolynomialOptimizationNonLinear<_N
           initial_solution_free, &lower_bounds_free, &upper_bounds_free);
 
   // Set segment time constraints
-  double multiplier = optimization_parameters_.state_bound_multiplicator;
+  const double multiplier = optimization_parameters_.time_bound_multiplicator;
   for (int l = 0; l < n_segments; ++l) {
     const double abs_x = std::abs(initial_solution[l]);
     lower_bounds.push_back(0.1); // TODO: needed?
