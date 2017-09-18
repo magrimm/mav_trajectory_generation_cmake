@@ -50,7 +50,7 @@ PolynomialOptimizationNonLinear<_N>::PolynomialOptimizationNonLinear(
     size_t dimension, const NonlinearOptimizationParameters& parameters)
     : poly_opt_(dimension),
       dimension_(dimension),
-      derivative_to_optimize_(derivative_order::INVALID),
+      derivative_to_optimize_(-1),
       optimization_parameters_(parameters) {}
 
 template <int _N>
