@@ -36,8 +36,8 @@ static constexpr int ORIENTATION = 0;
 static constexpr int ANGULAR_VELOCITY = 1;
 static constexpr int ANGULAR_ACCELERATION = 2;
 
-static constexpr int INVALID = -1;
-}
+static constexpr int kINVALID = -1;
+} // namespace derivative_order
 
 std::string positionDerivativeToString(int derivative);
 int positionDerivativeToInt(const std::string& string);

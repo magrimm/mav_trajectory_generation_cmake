@@ -46,7 +46,7 @@ int positionDerivativeToInt(const std::string& string) {
   } else if (string == "snap") {
     return SNAP;
   } else {
-    return INVALID;
+    return kINVALID;
   }
 }
 
@@ -70,7 +70,7 @@ int orientationDerivativeToInt(const std::string& string) {
   } else if (string == "angular_acceleration") {
     return ANGULAR_ACCELERATION;
   } else {
-    return INVALID;
+    return kINVALID;
   }
 }
 
