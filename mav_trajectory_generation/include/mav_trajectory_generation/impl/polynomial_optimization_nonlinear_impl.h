@@ -1354,7 +1354,7 @@ double PolynomialOptimizationNonLinear<_N
     if (optimization_data->optimization_parameters_.print_debug_info) {
       std::cout << std::endl << "GRADIENTS TIME: " << std::endl;
       for (int j = 0; j < n_segments; ++j) {
-        std::cout << j << ": " << w_t * grad_t[j] << std::endl;
+        std::cout << j << ": " << grad_t[j] << std::endl;
       }
 
       std::cout << "GRADIENTS D | C | SC: " << std::endl;
@@ -1370,7 +1370,7 @@ double PolynomialOptimizationNonLinear<_N
     }
 
     for (int j = 0; j < n_segments; ++j) {
-      gradient[j] = w_t * grad_t[j];
+      gradient[j] = grad_t[j];
     }
 
     for (int k = 0; k < dim; ++k) {
