@@ -666,11 +666,10 @@ int PolynomialOptimizationNonLinear<_N
           initial_solution_free, &lower_bounds_free, &upper_bounds_free);
 
   // Set segment time constraints
-  const double multiplier = optimization_parameters_.time_bound_multiplicator;
   for (int l = 0; l < n_segments; ++l) {
     const double abs_x = std::abs(initial_solution[l]);
-    lower_bounds.push_back(0.1); // TODO: needed?
-    upper_bounds.push_back(abs_x * multiplier);
+    lower_bounds.push_back(0.1);
+    upper_bounds.push_back(HUGE_VAL);
   }
   // Append free endpoint derivative constraints
   lower_bounds.insert(std::end(lower_bounds), std::begin(lower_bounds_free),
