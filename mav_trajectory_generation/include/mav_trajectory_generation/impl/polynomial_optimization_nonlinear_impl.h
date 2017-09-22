@@ -373,7 +373,7 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraints() {
   int result;
 
   try {
-    timing::Timer timer_solve("optimize_nlin_free_constraints");
+    timing::Timer timer_solve("optimize_nlin_deriv");
     result = nlopt_->optimize(initial_solution, final_cost);
     timer_solve.Stop();
   } catch (std::exception& e) {
@@ -479,7 +479,7 @@ int PolynomialOptimizationNonLinear<_N>::optimizeFreeConstraintsAndCollision() {
   int result;
 
   try {
-    timing::Timer timer_solve("optimize_nlin_free_constraints_and_collision");
+    timing::Timer timer_solve("optimize_nlin_deriv_coll");
     result = nlopt_->optimize(initial_solution, final_cost);
     timer_solve.Stop();
   } catch (std::exception& e) {
@@ -578,7 +578,7 @@ int PolynomialOptimizationNonLinear<_N>::optimizeTimeAndFreeConstraints() {
   int result;
 
   try {
-    timing::Timer timer_solve("optimize_nlin_time_and_constraints");
+    timing::Timer timer_solve("optimize_nlin_deriv_time");
     result = nlopt_->optimize(initial_solution, final_cost);
     timer_solve.Stop();
   } catch (std::exception& e) {
@@ -715,8 +715,7 @@ int PolynomialOptimizationNonLinear<_N
   int result;
 
   try {
-    timing::Timer timer_solve
-            ("optimize_nonlin_free_derivatives_and_collision_and_time");
+    timing::Timer timer_solve("optimize_nlin_deriv_coll_time");
     result = nlopt_->optimize(initial_solution, final_cost);
     timer_solve.Stop();
   } catch (std::exception& e) {
