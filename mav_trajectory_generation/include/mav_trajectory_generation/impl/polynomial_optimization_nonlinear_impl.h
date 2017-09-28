@@ -2074,7 +2074,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostPotential(
   *is_collision = false;
   double cost = 0.0;
   collision_distance -= robot_radius;
-  if (collision_distance < 0.0) {
+  if (collision_distance <= 0.0) {
 //    cost = -collision_distance + 0.5 * epsilon;
     cost = collision_potential_multiplier*(-collision_distance) + 0.5 * epsilon;
     *is_collision = true;
