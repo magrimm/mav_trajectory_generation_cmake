@@ -1221,14 +1221,20 @@ double PolynomialOptimizationNonLinear<_N
   double J_t = 0.0;
   double J_sc = 0.0;
   if (!gradient.empty()) {
+    timing::Timer opti_deriv_timer("opti/deriv");
     J_d = optimization_data->getCostAndGradientDerivative(
             &grad_d, optimization_data);
+    opti_deriv_timer.Stop();
+    timing::Timer opti_coll_timer("opti/coll");
     J_c = optimization_data->getCostAndGradientCollision(
             &grad_c, optimization_data, &is_collision);
-    J_t = optimization_data->getCostAndGradientTime(&grad_t, optimization_data);
+    opti_coll_timer.Stop();
+
     if (optimization_data->optimization_parameters_.use_soft_constraints) {
+      timing::Timer opti_constraints_timer("opti/constraints");
       J_sc = optimization_data->getCostAndGradientSoftConstraints(
               &grad_sc, optimization_data);
+      opti_constraints_timer.Stop();
     }
 
     if (optimization_data->optimization_parameters_.is_simple_numgrad_time) {
@@ -1243,14 +1249,22 @@ double PolynomialOptimizationNonLinear<_N
       opti_time_timer.Stop();
     }
   } else {
+    timing::Timer opti_deriv_timer("opti_gradfree/deriv");
     J_d = optimization_data->getCostAndGradientDerivative(
             NULL, optimization_data);
+    opti_deriv_timer.Stop();
+    timing::Timer opti_coll_timer("opti_gradfree/coll");
     J_c = optimization_data->getCostAndGradientCollision(
             NULL, optimization_data, &is_collision);
+    opti_coll_timer.Stop();
+    timing::Timer opti_time_timer("opti_gradfree/time");
     J_t = optimization_data->getCostAndGradientTime(NULL, optimization_data);
+    opti_time_timer.Stop();
     if (optimization_data->optimization_parameters_.use_soft_constraints) {
+      timing::Timer opti_constraints_timer("opti_gradfree/constraints");
       J_sc = optimization_data->getCostAndGradientSoftConstraints(
               NULL, optimization_data);
+      opti_constraints_timer.Stop();
     }
   }
 
