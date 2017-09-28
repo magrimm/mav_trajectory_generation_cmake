@@ -1524,7 +1524,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
                          data->L_.rows(), n_free_constraints);
 
   *is_collision = false;
-  const double dt = 0.1; // TODO: parameterize
+  const double dt = data->optimization_parameters_.coll_check_time_increment;
   const double dist_sum_limit = data->optimization_parameters_.map_resolution;
 
   Eigen::VectorXd prev_pos(dim);
