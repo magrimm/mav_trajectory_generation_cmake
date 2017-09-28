@@ -1230,6 +1230,18 @@ double PolynomialOptimizationNonLinear<_N
       J_sc = optimization_data->getCostAndGradientSoftConstraints(
               &grad_sc, optimization_data);
     }
+
+    if (optimization_data->optimization_parameters_.is_simple_numgrad_time) {
+      timing::Timer opti_simple_time_timer("opti/simple_time");
+      J_t = optimization_data->getCostAndGradientTimeSimple(
+              &grad_t, optimization_data, J_d, J_c, J_sc);
+      opti_simple_time_timer.Stop();
+    } else {
+      timing::Timer opti_time_timer("opti/time");
+      J_t = optimization_data->getCostAndGradientTime(&grad_t,
+                                                      optimization_data);
+      opti_time_timer.Stop();
+    }
   } else {
     J_d = optimization_data->getCostAndGradientDerivative(
             NULL, optimization_data);
@@ -2043,6 +2055,79 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTime(
       const double dJd_dt = (J_d_bigger - J_d_smaller) / (2.0 * increment_time);
       const double dJc_dt = (J_c_bigger - J_c_smaller) / (2.0 * increment_time);
       const double dJsc_dt = (J_sc_bigger - J_sc_smaller) /(2.0*increment_time);
+      const double dJt_dt = 1.0; // J_t = t --> dJt_dt = 1.0 for all tm
+
+      // Calculate the gradient
+      gradients->at(n) = w_d*dJd_dt + w_c*dJc_dt + w_sc*dJsc_dt + w_t*dJt_dt;
+    }
+
+    // Set again the original segment times from before calculating the
+    // numerical gradient
+    data->poly_opt_.updateSegmentTimes(segment_times);
+  }
+
+  // Compute cost without gradient (only time)
+  double total_time = computeTotalTrajectoryTime(segment_times);
+  double J_t = total_time;  // TODO: squared? if yes, adjust dJt_dt = 2t
+
+  return J_t;
+}
+
+template <int _N>
+double PolynomialOptimizationNonLinear<_N>::getCostAndGradientTimeSimple(
+        std::vector<double>* gradients, void* opt_data,
+        double J_d, double J_c, double J_sc) {
+  CHECK_NOTNULL(opt_data);
+
+  PolynomialOptimizationNonLinear<N>* data =
+          static_cast<PolynomialOptimizationNonLinear<N>*>(opt_data);
+
+  // Weighting terms for different costs
+  const double w_d = data->optimization_parameters_.weights.w_d;
+  const double w_c = data->optimization_parameters_.weights.w_c;
+  const double w_t = data->optimization_parameters_.weights.w_t;
+  const double w_sc = data->optimization_parameters_.weights.w_sc;
+
+  // Retrieve the current segment times
+  std::vector<double> segment_times;
+  data->poly_opt_.getSegmentTimes(&segment_times);
+
+  if (gradients != NULL) {
+    const size_t n_segments = data->poly_opt_.getNumberSegments();
+    const size_t n_free_constraints = data->poly_opt_.getNumberFreeConstraints();
+    const size_t dim = data->poly_opt_.getDimension();
+
+    gradients->clear();
+    gradients->resize(n_segments);
+
+    // Initialize changed segment times for numerical derivative
+    std::vector<double> segment_times_bigger(n_segments);
+    const double increment_time = data->optimization_parameters_.increment_time;
+    for (int n = 0; n < n_segments; ++n) {
+
+      // Now the same with an increased segment time
+      // Calculate cost with higher segment time
+      segment_times_bigger = segment_times;
+      // TODO: check if segment times are bigger than 0.1; else ?
+      segment_times_bigger[n] = segment_times_bigger[n] <= 0.1 ?
+                                0.1 : segment_times_bigger[n] + increment_time;
+
+      // Update the segment times. This changes the polynomial coefficients.
+      data->poly_opt_.updateSegmentTimes(segment_times_bigger);
+
+      // Calculate cost and gradient with new segment time
+      bool is_collision_bigger;
+      const double J_d_bigger = data->getCostAndGradientDerivative(NULL, data);
+      const double J_c_bigger = data->getCostAndGradientCollision(
+              NULL, data, &is_collision_bigger);
+      double J_sc_bigger = 0.0;
+      if (data->optimization_parameters_.use_soft_constraints) {
+        J_sc_bigger = data->getCostAndGradientSoftConstraints(NULL, data);
+      }
+
+      const double dJd_dt = (J_d_bigger-J_d) / (increment_time);
+      const double dJc_dt = (J_c_bigger-J_c) / (increment_time);
+      const double dJsc_dt = (J_sc_bigger-J_sc) /(increment_time);
       const double dJt_dt = 1.0; // J_t = t --> dJt_dt = 1.0 for all tm
 
       // Calculate the gradient

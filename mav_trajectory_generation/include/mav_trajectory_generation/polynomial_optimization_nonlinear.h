@@ -67,7 +67,9 @@ struct NonlinearOptimizationParameters {
         robot_radius(0.5),
         coll_pot_multiplier(1.0),
         solve_with_position_constraint(false),
-        is_collision_safe(true) {}
+        is_collision_safe(true),
+        is_simple_numgrad_time(false),
+        coll_check_time_increment(0.1) {}
 
   // Stopping criteria, if objective function changes less than absolute value.
   // Disabled if negative.
@@ -172,6 +174,13 @@ struct NonlinearOptimizationParameters {
 
   // Should we increase the total cost to the initial cost in case of collision?
   bool is_collision_safe;
+
+  // Use a simple version for calculating the numerical gradient of time
+  // dJt/dt = J((t+delta_t) - J(t))/delta_t;
+  bool is_simple_numgrad_time;
+
+  // Time increment for cost and gradient calculation of the collision in sec
+  double coll_check_time_increment;
 };
 
 class OptimizationInfo {
@@ -445,6 +454,9 @@ class PolynomialOptimizationNonLinear {
   // Calculate the numerical gradients and the cost of the segment times.
   static double getCostAndGradientTime(
           std::vector<double>* gradients, void* opt_data);
+  static double getCostAndGradientTimeSimple(
+          std::vector<double>* gradients, void* opt_data,
+          double J_d, double J_c, double J_sc);
 
   // Calculate the numerical gradients and the cost of the soft constraints.
   static double getCostAndGradientSoftConstraints(
