@@ -1188,6 +1188,12 @@ double PolynomialOptimizationNonLinear<_N
   optimization_data->poly_opt_.updateSegmentTimes(segment_times);
   optimization_data->poly_opt_.setFreeConstraints(free_constraints);
 
+  // Update L since new segment times
+  Eigen::MatrixXd M, A_inv;
+  optimization_data->poly_opt_.getM(&M);
+  optimization_data->poly_opt_.getAInverse(&A_inv);
+  optimization_data->L_ = Eigen::MatrixXd(A_inv * M);
+
   if (optimization_data->optimization_parameters_.print_debug_info) {
     std::cout << "LOWER BOUNDS -- FREE CONSTRAINTS -- UPPER BOUNDS" << std::endl;
     for (int i = 0; i < segment_times.size(); ++i) {
