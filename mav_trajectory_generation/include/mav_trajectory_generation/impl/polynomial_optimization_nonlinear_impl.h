@@ -1324,13 +1324,31 @@ double PolynomialOptimizationNonLinear<_N
   // If in collision and total cost is smaller than initial total cost
   const double total_cost =
           cost_trajectory + cost_collision + cost_time + cost_constraints;
+  const double total_cost_last_iter =
+          optimization_data->optimization_info_.cost_trajectory +
+                  optimization_data->optimization_info_.cost_collision +
+                  optimization_data->optimization_info_.cost_time +
+                  optimization_data->optimization_info_.cost_soft_constraints;
+
   if (optimization_data->optimization_parameters_.is_collision_safe) {
-    if (is_collision && (total_cost < optimization_data->total_cost_iter0_)) {
-      std::cout << "old coll cost: " << cost_collision;
-      cost_collision = optimization_data->total_cost_iter0_ -
-              (total_cost - cost_collision);
-      std::cout << " | new coll cost: " << cost_collision << std::endl;
-      LOG(INFO) << "COLLISION: Raise total cost to inital total cost.";
+//    std::cout << "is_collision: " << is_collision << std::endl;
+    if (optimization_data->optimization_parameters_.is_coll_raise_first_iter) {
+      if (is_collision && (total_cost < optimization_data->total_cost_iter0_)) {
+//        std::cout << "0 iter: old coll cost: " << cost_collision;
+        cost_collision = optimization_data->total_cost_iter0_ -
+                (total_cost - cost_collision) +
+                optimization_data->optimization_parameters_.add_coll_raise;
+//        std::cout << " | new coll cost: " << cost_collision << std::endl;
+        LOG(INFO) << "COLLISION: Raise total cost to inital total cost.";
+      }
+    } else {
+      if (is_collision && (total_cost < total_cost_last_iter)) {
+//        std::cout << "Last iter: old coll cost: " << cost_collision;
+        cost_collision = total_cost_last_iter - (total_cost - cost_collision) +
+                optimization_data->optimization_parameters_.add_coll_raise;
+//        std::cout << " | new coll cost: " << cost_collision << std::endl;
+        LOG(INFO) << "COLLISION: Raise total cost to inital total cost.";
+      }
     }
   }
 

@@ -70,7 +70,9 @@ struct NonlinearOptimizationParameters {
         solve_with_position_constraint(false),
         is_collision_safe(true),
         is_simple_numgrad_time(false),
-        coll_check_time_increment(0.1) {}
+        coll_check_time_increment(0.1),
+        is_coll_raise_first_iter(true),
+        add_coll_raise(0.0) {}
 
   // Stopping criteria, if objective function changes less than absolute value.
   // Disabled if negative.
@@ -185,6 +187,9 @@ struct NonlinearOptimizationParameters {
 
   // Time increment for cost and gradient calculation of the collision in sec
   double coll_check_time_increment;
+
+  bool is_coll_raise_first_iter;
+  double add_coll_raise;
 };
 
 class OptimizationInfo {
