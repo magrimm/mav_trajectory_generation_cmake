@@ -1556,7 +1556,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
   prev_pos.setZero();
   // sum --> numerical integral
   double time_sum = -1;
-  double dist_sum = 0;
+  double dist_sum = 0.0;
   double t = 0.0;
   for (int i = 0; i < n_segments; ++i) {
     for (t = 0.0; t < segment_times[i]; t += dt) {
@@ -1588,9 +1588,8 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
         vel(k) = (T.transpose() * data->V_ * p_k)(0);
       }
 
-      // Numerical integration
+      // Numerical integration --> Skip first entry
       if (time_sum < 0) {
-        // Skip first entry
         time_sum = 0.0;
         prev_pos = pos;
         continue;
