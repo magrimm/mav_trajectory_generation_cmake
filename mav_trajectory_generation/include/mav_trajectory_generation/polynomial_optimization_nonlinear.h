@@ -49,6 +49,7 @@ struct NonlinearOptimizationParameters {
         equality_constraint_tolerance(1.0e-3),
         inequality_constraint_tolerance(0.1),
         max_iterations(3000),
+        max_time(-1),
         time_penalty(500.0),
         algorithm(nlopt::LN_SBPLX),
         random_seed(0),
@@ -99,6 +100,9 @@ struct NonlinearOptimizationParameters {
 
   // Maximum number of iterations. Disabled if negative.
   int max_iterations;
+
+  // Maximum time allowed. Disable if negative.
+  double max_time;
 
   // Penalty for the segment time.
   double time_penalty;
