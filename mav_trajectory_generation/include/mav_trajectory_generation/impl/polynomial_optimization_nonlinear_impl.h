@@ -2338,8 +2338,9 @@ PolynomialOptimizationNonLinear<_N>::evaluateMaximumMagnitudeAsSoftConstraint(
   std::vector<double> dummy;
   double cost = 0;
 
-  if (optimization_parameters_.print_debug_info)
-    std::cout << "  soft_constraints: " << std::endl;
+//  if (optimization_parameters_.print_debug_info) {
+//    std::cout << "  soft_constraints: " << std::endl;
+//  }
 
   for (std::shared_ptr<const ConstraintData> constraint :
        inequality_constraints_) {
@@ -2352,12 +2353,12 @@ PolynomialOptimizationNonLinear<_N>::evaluateMaximumMagnitudeAsSoftConstraint(
     const double current_cost =
         std::min(maximum_cost, exp(relative_violation * weight));
     cost += current_cost;
-    if (optimization_parameters_.print_debug_info) {
-      std::cout << "    derivative " << constraint->derivative
-                << " abs violation: " << abs_violation
-                << " : relative violation: " << relative_violation
-                << " cost: " << current_cost << std::endl;
-    }
+//    if (optimization_parameters_.print_debug_info) {
+//      std::cout << "    derivative " << constraint->derivative
+//                << " abs violation: " << abs_violation
+//                << " : relative violation: " << relative_violation
+//                << " cost: " << current_cost << std::endl;
+//    }
   }
   return cost;
 }
