@@ -1238,10 +1238,17 @@ double PolynomialOptimizationNonLinear<_N
     opti_coll_timer.Stop();
 
     if (optimization_data->optimization_parameters_.use_soft_constraints) {
-      timing::Timer opti_constraints_timer("opti/constraints");
-      J_sc = optimization_data->getCostAndGradientSoftConstraints(
-              &grad_sc, optimization_data);
-      opti_constraints_timer.Stop();
+      if (optimization_data->optimization_parameters_.is_simple_numgrad_constraints) {
+        timing::Timer opti_constraints_simple_timer("opti/constraints_simple");
+        J_sc = optimization_data->getCostAndGradientSoftConstraintsSimple(
+                &grad_sc, optimization_data);
+        opti_constraints_simple_timer.Stop();
+      } else {
+        timing::Timer opti_constraints_timer("opti/constraints");
+        J_sc = optimization_data->getCostAndGradientSoftConstraints(
+                &grad_sc, optimization_data);
+        opti_constraints_timer.Stop();
+      }
     }
 
     if (optimization_data->optimization_parameters_.is_simple_numgrad_time) {
@@ -1268,10 +1275,17 @@ double PolynomialOptimizationNonLinear<_N
     J_t = optimization_data->getCostAndGradientTime(NULL, optimization_data);
     opti_time_timer.Stop();
     if (optimization_data->optimization_parameters_.use_soft_constraints) {
-      timing::Timer opti_constraints_timer("opti_gradfree/constraints");
-      J_sc = optimization_data->getCostAndGradientSoftConstraints(
-              NULL, optimization_data);
-      opti_constraints_timer.Stop();
+      if (optimization_data->optimization_parameters_.is_simple_numgrad_constraints) {
+        timing::Timer opti_constraints_simple_timer("opti/constraints_simple");
+        J_sc = optimization_data->getCostAndGradientSoftConstraintsSimple(
+                NULL, optimization_data);
+        opti_constraints_simple_timer.Stop();
+      } else {
+        timing::Timer opti_constraints_timer("opti_gradfree/constraints");
+        J_sc = optimization_data->getCostAndGradientSoftConstraints(
+                NULL, optimization_data);
+        opti_constraints_timer.Stop();
+      }
     }
   }
 
@@ -2017,6 +2031,67 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientSoftConstraints(
   double J_sc = data->evaluateMaximumMagnitudeAsSoftConstraint(
           data->inequality_constraints_,
           data->optimization_parameters_.soft_constraint_weight);
+  return J_sc;
+}
+
+template <int _N>
+double PolynomialOptimizationNonLinear<_N>::
+getCostAndGradientSoftConstraintsSimple(
+        std::vector<Eigen::VectorXd>* gradients, void* opt_data) {
+  CHECK_NOTNULL(opt_data);
+
+  PolynomialOptimizationNonLinear<N>* data =
+          static_cast<PolynomialOptimizationNonLinear<N>*>(opt_data);
+
+  double J_sc = data->evaluateMaximumMagnitudeAsSoftConstraint(
+          data->inequality_constraints_,
+          data->optimization_parameters_.soft_constraint_weight);
+
+  if (gradients != NULL) {
+    const size_t n_free_constraints =
+            data->poly_opt_.getNumberFreeConstraints();
+    const size_t dim = data->poly_opt_.getDimension();
+
+    gradients->clear();
+    gradients->resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+
+    // Get the current free constraints
+    std::vector<Eigen::VectorXd> free_constraints;
+    data->poly_opt_.getFreeConstraints(&free_constraints);
+
+    std::vector<Eigen::VectorXd> free_constraints_right;
+    free_constraints_right.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+    const double increment_dist = data->optimization_parameters_.map_resolution;
+
+    std::vector<Eigen::VectorXd> increment(
+            dim, Eigen::VectorXd::Zero(n_free_constraints));
+    for (int k = 0; k < dim; ++k) {
+      increment.clear();
+      increment.resize(dim, Eigen::VectorXd::Zero(n_free_constraints));
+
+      for (int n = 0; n < n_free_constraints; ++n) {
+        increment[k].setZero();
+        increment[k][n] = increment_dist;
+
+        for (int k2 = 0; k2 < dim; ++k2) {
+          free_constraints_right[k2] = free_constraints[k2] + increment[k2];
+        }
+        data->poly_opt_.setFreeConstraints(free_constraints_right);
+        const double cost_right =
+                data->evaluateMaximumMagnitudeAsSoftConstraint(
+                data->inequality_constraints_,
+                data->optimization_parameters_.soft_constraint_weight);
+
+        const double grad_k_n = (cost_right - J_sc) / (increment_dist);
+        gradients->at(k)[n] = grad_k_n;
+      }
+    }
+
+    // Set again the original constraints from before calculating the numerical
+    // constraints
+    data->poly_opt_.setFreeConstraints(free_constraints);
+  }
+
   return J_sc;
 }
 

@@ -70,6 +70,7 @@ struct NonlinearOptimizationParameters {
         solve_with_position_constraint(false),
         is_collision_safe(true),
         is_simple_numgrad_time(false),
+        is_simple_numgrad_constraints(false),
         coll_check_time_increment(0.1),
         is_coll_raise_first_iter(true),
         add_coll_raise(0.0) {}
@@ -184,6 +185,7 @@ struct NonlinearOptimizationParameters {
   // Use a simple version for calculating the numerical gradient of time
   // dJt/dt = J((t+delta_t) - J(t))/delta_t;
   bool is_simple_numgrad_time;
+  bool is_simple_numgrad_constraints;
 
   // Time increment for cost and gradient calculation of the collision in sec
   double coll_check_time_increment;
@@ -469,6 +471,8 @@ class PolynomialOptimizationNonLinear {
 
   // Calculate the numerical gradients and the cost of the soft constraints.
   static double getCostAndGradientSoftConstraints(
+          std::vector<Eigen::VectorXd>* gradients, void* opt_data);
+  static double getCostAndGradientSoftConstraintsSimple(
           std::vector<Eigen::VectorXd>* gradients, void* opt_data);
 
   // Calculate the cost of the collision potential at a given distance to the
