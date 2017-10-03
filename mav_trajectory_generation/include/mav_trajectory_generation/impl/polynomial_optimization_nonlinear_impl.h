@@ -1728,7 +1728,7 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
   if (is_valid_state && data->optimization_parameters_.use_continous_distance) {
     distance = data->getDistanceSDF(position, data->sdf_);
   } else {
-    distance = data->sdf_->Get(position[0], position[1], position[2]);
+    distance = data->sdf_->getDistanceInMetricUnits(position);
   }
 
   // Get potential cost from distance to collision
@@ -1750,8 +1750,8 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
         left_dist = data->getDistanceSDF(position-increment, data->sdf_);
         right_dist = data->getDistanceSDF(position+increment, data->sdf_);
       } else { // Discretized uniform grid
-        left_dist = data->sdf_->Get3d(position-increment);
-        right_dist = data->sdf_->Get3d(position+increment);
+        left_dist = data->sdf_->getDistanceInMetricUnits(position-increment);
+        right_dist = data->sdf_->getDistanceInMetricUnits(position+increment);
       }
 
       bool is_collision_left, is_collision_right;
@@ -1786,18 +1786,26 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
 template <int _N>
 std::vector<std::pair<float, bool>> PolynomialOptimizationNonLinear<_N>::
 getNeighborsSDF(const std::vector<int64_t>& idx,
-                const std::shared_ptr<sdf_tools::SignedDistanceField>& sdf) {
+                const std::shared_ptr<motion_planning::ESDF>& sdf) {
   std::vector<std::pair<float, bool>> q;
 
   // Get distances of 8 corner neighbors
-  q.push_back(sdf->GetSafe(idx[0]-1, idx[1]-1, idx[2]-1)); // q000
-  q.push_back(sdf->GetSafe(idx[0]-1, idx[1]-1, idx[2]+1)); // q001
-  q.push_back(sdf->GetSafe(idx[0]-1, idx[1]+1, idx[2]-1)); // q010
-  q.push_back(sdf->GetSafe(idx[0]-1, idx[1]+1, idx[2]+1)); // q011
-  q.push_back(sdf->GetSafe(idx[0]+1, idx[1]-1, idx[2]-1)); // q100
-  q.push_back(sdf->GetSafe(idx[0]+1, idx[1]-1, idx[2]+1)); // q101
-  q.push_back(sdf->GetSafe(idx[0]+1, idx[1]+1, idx[2]-1)); // q110
-  q.push_back(sdf->GetSafe(idx[0]+1, idx[1]+1, idx[2]+1)); // q111
+  q.push_back(std::make_pair(sdf->getDistanceInMetricUnitsFromIndices(
+          Eigen::Vector3i(idx[0]-1, idx[1]-1, idx[2]-1)), true)); // q000
+  q.push_back(std::make_pair(sdf->getDistanceInMetricUnitsFromIndices(
+          Eigen::Vector3i(idx[0]-1, idx[1]-1, idx[2]+1)), true)); // q001
+  q.push_back(std::make_pair(sdf->getDistanceInMetricUnitsFromIndices(
+          Eigen::Vector3i(idx[0]-1, idx[1]+1, idx[2]-1)), true)); // q010
+  q.push_back(std::make_pair(sdf->getDistanceInMetricUnitsFromIndices(
+          Eigen::Vector3i(idx[0]-1, idx[1]+1, idx[2]+1)), true)); // q011
+  q.push_back(std::make_pair(sdf->getDistanceInMetricUnitsFromIndices(
+          Eigen::Vector3i(idx[0]+1, idx[1]-1, idx[2]-1)), true)); // q100
+  q.push_back(std::make_pair(sdf->getDistanceInMetricUnitsFromIndices(
+          Eigen::Vector3i(idx[0]+1, idx[1]-1, idx[2]+1)), true)); // q101
+  q.push_back(std::make_pair(sdf->getDistanceInMetricUnitsFromIndices(
+          Eigen::Vector3i(idx[0]+1, idx[1]+1, idx[2]-1)), true)); // q110
+  q.push_back(std::make_pair(sdf->getDistanceInMetricUnitsFromIndices(
+          Eigen::Vector3i(idx[0]+1, idx[1]+1, idx[2]+1)), true)); // q111
 
   return q;
 }
@@ -1805,10 +1813,12 @@ getNeighborsSDF(const std::vector<int64_t>& idx,
 template <int _N>
 double PolynomialOptimizationNonLinear<_N>::getDistanceSDF(
         const Eigen::Vector3d& position,
-        const std::shared_ptr<sdf_tools::SignedDistanceField>& sdf) {
+        const std::shared_ptr<motion_planning::ESDF>& sdf) {
 
   // Convert location to grid index
-  const std::vector<int64_t> idx = sdf->LocationToGridIndex3d(position);
+  const Eigen::Vector3i eigen_idx = sdf->getPositionInCellUnits(position);
+  const std::vector<int64_t> idx = {eigen_idx.x(), eigen_idx.y(), eigen_idx.z()};
+
   // Retrieve all neighbouring grid cells
   const std::vector<std::pair<float, bool>> q_xyz = getNeighborsSDF(idx, sdf);
 
@@ -1823,14 +1833,18 @@ double PolynomialOptimizationNonLinear<_N>::getDistanceSDF(
 
   double distance = 0.0;
   if (!is_valid) {
-    distance = sdf->Get(position[0], position[1], position[2]);
+    distance = sdf->getDistanceInMetricUnits(position);
     std::cout << "NOT VALID DIST: " << distance << std::endl;
   } else {
     // Get positions x0, x1, y0, y1, z0, z1
-    std::vector<double> x0y0z0 =
-            sdf->GridIndexToLocation(idx[0]-1, idx[1]-1, idx[2]-1);
-    std::vector<double> x1y1z1 =
-            sdf->GridIndexToLocation(idx[0]+1, idx[1]+1, idx[2]+1);
+    Eigen::Vector3d eigen_x0y0z0 = sdf->getPositionInMetricUnits(
+            Eigen::Vector3i(idx[0]-1, idx[1]-1, idx[2]-1));
+    std::vector<double> x0y0z0 = {eigen_x0y0z0.x(), eigen_x0y0z0.y(),
+                                  eigen_x0y0z0.z()};
+    Eigen::Vector3d eigen_x1y1z1 = sdf->getPositionInMetricUnits(
+            Eigen::Vector3i(idx[0]+1, idx[1]+1, idx[2]+1));
+    std::vector<double> x1y1z1 = {eigen_x1y1z1.x(), eigen_x1y1z1.y(),
+                                  eigen_x1y1z1.z()};
 
     distance = triLerp(
             position[0], position[1], position[2],

@@ -23,7 +23,7 @@
 
 #include <memory>
 #include <nlopt.hpp>
-#include <sdf_tools/sdf.hpp>
+#include <esdf/esdf.hpp>
 #include <fstream>
 
 #include "mav_trajectory_generation/polynomial_optimization_linear.h"
@@ -167,7 +167,7 @@ struct NonlinearOptimizationParameters {
 
   // Use numerical gradients
   bool use_numeric_grad;
-  bool use_continous_distance;
+  bool use_continous_distance; // TODO: fix for new esdf/esdf.hpp
   double increment_time;
 
   double epsilon; // Obstacle clearance
@@ -321,7 +321,7 @@ class PolynomialOptimizationNonLinear {
   OptimizationInfo getOptimizationInfo() const { return optimization_info_; }
 
   // Set the signed distance field needed for collision potential optimization.
-  void setSDF(const std::shared_ptr<sdf_tools::SignedDistanceField>& sdf) {
+  void setSDF(const std::shared_ptr<motion_planning::ESDF>& sdf) {
     sdf_ = sdf;
   };
 
@@ -538,11 +538,11 @@ class PolynomialOptimizationNonLinear {
   // Get sdf values of 8 corner neighbours
   std::vector<std::pair<float, bool>> getNeighborsSDF(
           const std::vector<int64_t>& idx,
-          const std::shared_ptr<sdf_tools::SignedDistanceField>& sdf);
+          const std::shared_ptr<motion_planning::ESDF>& sdf);
   // Get the distance of from the sdf with trilinear interpolation
   double getDistanceSDF(
           const Eigen::Vector3d& position,
-          const std::shared_ptr<sdf_tools::SignedDistanceField>& sdf);
+          const std::shared_ptr<motion_planning::ESDF>& sdf);
 
   // Calculate matrix for mapping vector of polynomial coefficients of a
   // function to the polynomial coefficients of its derivative.
@@ -600,7 +600,7 @@ class PolynomialOptimizationNonLinear {
   Eigen::MatrixXd Snap_all_segments_;
 
   // Signed Distance Field needed for optimizing the collision potential
-  std::shared_ptr<sdf_tools::SignedDistanceField> sdf_;
+  std::shared_ptr<motion_planning::ESDF> sdf_;
 
   // Linear solution / Initial guess
   Trajectory trajectory_initial_;
