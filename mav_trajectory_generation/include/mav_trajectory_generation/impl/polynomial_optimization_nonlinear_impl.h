@@ -1524,6 +1524,8 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientCollision(
   PolynomialOptimizationNonLinear<N>* data =
           static_cast<PolynomialOptimizationNonLinear<N>*>(opt_data);
 
+  CHECK_NOTNULL(data->sdf_.get());
+
   const size_t n_segments = data->poly_opt_.getNumberSegments();
   const size_t n_free_constraints = data->poly_opt_.getNumberFreeConstraints();
   const size_t n_fixed_constraints = data->poly_opt_.getNumberFixedConstraints();
