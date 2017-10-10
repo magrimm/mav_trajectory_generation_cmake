@@ -24,6 +24,7 @@
 #include <memory>
 #include <nlopt.hpp>
 #include <esdf/esdf.hpp>
+#include <sdf_tools/sdf.hpp>
 #include <fstream>
 
 #include "mav_trajectory_generation/polynomial_optimization_linear.h"
@@ -73,7 +74,8 @@ struct NonlinearOptimizationParameters {
         is_simple_numgrad_constraints(false),
         coll_check_time_increment(0.1),
         is_coll_raise_first_iter(true),
-        add_coll_raise(0.0) {}
+        add_coll_raise(0.0),
+        use_esdf(true) {}
 
   // Stopping criteria, if objective function changes less than absolute value.
   // Disabled if negative.
@@ -192,6 +194,8 @@ struct NonlinearOptimizationParameters {
 
   bool is_coll_raise_first_iter;
   double add_coll_raise;
+
+  double use_esdf;
 };
 
 class OptimizationInfo {
@@ -322,6 +326,11 @@ class PolynomialOptimizationNonLinear {
 
   // Set the signed distance field needed for collision potential optimization.
   void setSDF(const std::shared_ptr<motion_planning::ESDF>& sdf) {
+    esdf_ = sdf;
+  };
+
+  // Set the signed distance field needed for collision potential optimization.
+  void setSDF(const std::shared_ptr<sdf_tools::SignedDistanceField>& sdf) {
     sdf_ = sdf;
   };
 
@@ -537,12 +546,9 @@ class PolynomialOptimizationNonLinear {
 
   // Get sdf values of 8 corner neighbours
   std::vector<std::pair<float, bool>> getNeighborsSDF(
-          const std::vector<int64_t>& idx,
-          const std::shared_ptr<motion_planning::ESDF>& sdf);
+          const std::vector<int64_t>& idx);
   // Get the distance of from the sdf with trilinear interpolation
-  double getDistanceSDF(
-          const Eigen::Vector3d& position,
-          const std::shared_ptr<motion_planning::ESDF>& sdf);
+  double getDistanceSDF(const Eigen::Vector3d& position);
 
   // Calculate matrix for mapping vector of polynomial coefficients of a
   // function to the polynomial coefficients of its derivative.
@@ -600,7 +606,8 @@ class PolynomialOptimizationNonLinear {
   Eigen::MatrixXd Snap_all_segments_;
 
   // Signed Distance Field needed for optimizing the collision potential
-  std::shared_ptr<motion_planning::ESDF> sdf_;
+  std::shared_ptr<motion_planning::ESDF> esdf_;
+  std::shared_ptr<sdf_tools::SignedDistanceField> sdf_;
 
   // Linear solution / Initial guess
   Trajectory trajectory_initial_;
