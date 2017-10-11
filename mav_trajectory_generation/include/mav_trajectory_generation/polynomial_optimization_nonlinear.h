@@ -327,11 +327,13 @@ class PolynomialOptimizationNonLinear {
   // Set the signed distance field needed for collision potential optimization.
   void setSDF(const std::shared_ptr<motion_planning::ESDF>& sdf) {
     esdf_ = sdf;
+    optimization_parameters_.use_esdf = true;
   };
 
   // Set the signed distance field needed for collision potential optimization.
   void setSDF(const std::shared_ptr<sdf_tools::SignedDistanceField>& sdf) {
     sdf_ = sdf;
+    optimization_parameters_.use_esdf = false;
   };
 
   // Compute the initial solution for the optimization without position
