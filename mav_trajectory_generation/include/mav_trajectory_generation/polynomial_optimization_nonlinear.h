@@ -169,7 +169,7 @@ struct NonlinearOptimizationParameters {
 
   // Use numerical gradients
   bool use_numeric_grad;
-  bool use_continous_distance; // TODO: fix for new esdf/esdf.hpp
+  bool use_continous_distance;
   double increment_time;
 
   double epsilon; // Obstacle clearance
