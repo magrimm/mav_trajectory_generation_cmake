@@ -33,7 +33,7 @@ namespace mav_trajectory_generation {
 template <int _N>
 PolynomialOptimization<_N>::PolynomialOptimization(size_t dimension)
     : dimension_(dimension),
-      derivative_to_optimize_(derivative_order::INVALID),
+      derivative_to_optimize_(derivative_order::kINVALID),
       n_vertices_(0),
       n_segments_(0),
       n_all_constraints_(0),

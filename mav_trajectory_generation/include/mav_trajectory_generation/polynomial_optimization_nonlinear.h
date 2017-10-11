@@ -23,10 +23,19 @@
 
 #include <memory>
 #include <nlopt.hpp>
+#include <esdf/esdf.hpp>
+#include <sdf_tools/sdf.hpp>
+#include <fstream>
 
 #include "mav_trajectory_generation/polynomial_optimization_linear.h"
 
 namespace mav_trajectory_generation {
+
+// Implements parts of the continuous-time trajectory optimization described
+// in [2]
+// [2]: Continuous-Time Trajectory Optimization for Online UAV Replanning.
+//      Helen Oleynikova, Michael Burri, Zachary Taylor, Juan Nieto, Roland
+// Siegwart and Enric Galceran. IROS 2016
 
 // Class holding all important parameters for nonlinear optimization.
 struct NonlinearOptimizationParameters {
@@ -41,13 +50,32 @@ struct NonlinearOptimizationParameters {
         equality_constraint_tolerance(1.0e-3),
         inequality_constraint_tolerance(0.1),
         max_iterations(3000),
+        max_time(-1),
         time_penalty(500.0),
         algorithm(nlopt::LN_SBPLX),
         random_seed(0),
         use_soft_constraints(true),
         soft_constraint_weight(100.0),
         print_debug_info(false),
-        objective(kOptimizeFreeConstraintsAndTime) {}
+        objective(kOptimizeFreeConstraintsAndTime),
+        weights(),
+        map_resolution(0.0),
+        min_bound(Eigen::Vector3d::Zero()),
+        max_bound(Eigen::Vector3d::Zero()),
+        use_numeric_grad(false),
+        use_continous_distance(false),
+        increment_time(0.1),
+        epsilon(0.5),
+        robot_radius(0.5),
+        coll_pot_multiplier(1.0),
+        solve_with_position_constraint(false),
+        is_collision_safe(true),
+        is_simple_numgrad_time(false),
+        is_simple_numgrad_constraints(false),
+        coll_check_time_increment(0.1),
+        is_coll_raise_first_iter(true),
+        add_coll_raise(0.0),
+        use_esdf(true) {}
 
   // Stopping criteria, if objective function changes less than absolute value.
   // Disabled if negative.
@@ -78,6 +106,9 @@ struct NonlinearOptimizationParameters {
   // Maximum number of iterations. Disabled if negative.
   int max_iterations;
 
+  // Maximum time allowed. Disable if negative.
+  double max_time;
+
   // Penalty for the segment time.
   double time_penalty;
 
@@ -107,11 +138,64 @@ struct NonlinearOptimizationParameters {
   // kOptimizeFreeConstraintsAndTime: Both segment times and free
   // derivatives become optimization variables. This case is
   // theoretically correct, but may result in more iterations.
+  // kOptimizeFreeConstraintsAndCollision: The free derivatives are optimized
+  // with cost for the derivatives and cost for the colliison potential
   enum OptimizationObjective {
+    kOptimizeFreeConstraints,
     kOptimizeFreeConstraintsAndTime,
     kOptimizeTime,
+    kOptimizeFreeConstraintsAndCollision,
+    kOptimizeFreeConstraintsAndCollisionAndTime,
     kUnknown
   } objective;
+
+  // Struct storing all the weights for the cost and gradients
+  struct cost_weights {
+    // Default constructor
+    cost_weights() : w_d(0.1), w_c(10.0), w_t(1.0), w_sc(1.0) {}
+
+    double w_d;  // Weight for derivative cost
+    double w_c;  // Weight for collision cost
+    double w_t;  // Weight for time cost
+    double w_sc; // Weight for soft constraint cost
+  } weights;
+
+  // Map resolution of the environment
+  double map_resolution;
+
+  // Upper and Lower boundaries of the map/environment
+  Eigen::Vector3d min_bound;
+  Eigen::Vector3d max_bound;
+
+  // Use numerical gradients
+  bool use_numeric_grad;
+  bool use_continous_distance;
+  double increment_time;
+
+  double epsilon; // Obstacle clearance
+  double robot_radius; // bounding box sphere radius
+
+  double coll_pot_multiplier; // Multiplier for the potential cost in collision
+
+  // Do we solve with or without position constraints for the vertices
+  // between start and goal?
+  bool solve_with_position_constraint;
+
+  // Should we increase the total cost to the initial cost in case of collision?
+  bool is_collision_safe;
+
+  // Use a simple version for calculating the numerical gradient of time
+  // dJt/dt = J((t+delta_t) - J(t))/delta_t;
+  bool is_simple_numgrad_time;
+  bool is_simple_numgrad_constraints;
+
+  // Time increment for cost and gradient calculation of the collision in sec
+  double coll_check_time_increment;
+
+  bool is_coll_raise_first_iter;
+  double add_coll_raise;
+
+  double use_esdf;
 };
 
 class OptimizationInfo {
@@ -120,6 +204,7 @@ class OptimizationInfo {
       : n_iterations(0),
         stopping_reason(nlopt::FAILURE),
         cost_trajectory(0),
+        cost_collision(0),
         cost_time(0),
         cost_soft_constraints(0),
         optimization_time(0) {}
@@ -127,6 +212,7 @@ class OptimizationInfo {
   int n_iterations;
   int stopping_reason;
   double cost_trajectory;
+  double cost_collision;
   double cost_time;
   double cost_soft_constraints;
   double optimization_time;
@@ -191,6 +277,39 @@ class PolynomialOptimizationNonLinear {
     poly_opt_.getTrajectory(trajectory);
   }
 
+  // Get the trajectory of the initial solution given to the nonlinear solver
+  void getInitialSolutionTrajectory(Trajectory* trajectory) const {
+    CHECK_NOTNULL(trajectory);
+    Segment::Vector segments;
+    trajectory_initial_.getSegments(&segments);
+    CHECK(!segments.empty());
+    trajectory->setSegments(segments);
+  }
+
+  // Get the trajectory of the initial solution given to the nonlinear solver
+  void getInitialTrajectoryAfterRemovingPos(Trajectory* trajectory) const {
+    CHECK_NOTNULL(trajectory);
+    Segment::Vector segments;
+    trajectory_initial_after_removing_pos_.getSegments(&segments);
+    CHECK(!segments.empty());
+    trajectory->setSegments(segments);
+  }
+
+  // Get all trajectories from each nlopt iteration
+  void getAllTrajectories(std::vector<Trajectory>* trajectories) const {
+    CHECK_NOTNULL(trajectories);
+    trajectories->reserve(all_trajectories_.size());
+
+    for (int i = 0; i < all_trajectories_.size(); ++i) {
+      Trajectory traj_i;
+      Segment::Vector segments;
+      all_trajectories_[i].getSegments(&segments);
+      CHECK(!segments.empty());
+      traj_i.setSegments(segments);
+      trajectories->push_back(traj_i);
+    }
+  }
+
   // Returns a const reference to the underlying linear optimization
   // object.
   const PolynomialOptimization<N>& getPolynomialOptimizationRef() const {
@@ -205,6 +324,38 @@ class PolynomialOptimizationNonLinear {
 
   OptimizationInfo getOptimizationInfo() const { return optimization_info_; }
 
+  // Set the signed distance field needed for collision potential optimization.
+  void setSDF(const std::shared_ptr<motion_planning::ESDF>& sdf) {
+    esdf_ = sdf;
+    optimization_parameters_.use_esdf = true;
+  };
+
+  // Set the signed distance field needed for collision potential optimization.
+  void setSDF(const std::shared_ptr<sdf_tools::SignedDistanceField>& sdf) {
+    sdf_ = sdf;
+    optimization_parameters_.use_esdf = false;
+  };
+
+  // Compute the initial solution for the optimization without position
+  // constraints apart from the start and goal vertices.
+  // 1) Get the linear solution with position constraints at all vertices
+  // 2) Get the polynomial coefficients from this solution for each segment
+  // 3) Remove the position constraints from the intermediate vertices (still
+  // fully constrained start and goal)
+  // 4) Re-setup the problem with the new constraints. The position
+  // constraints are now part of d_p the free constraints which are to be
+  // optimized. (Fixed derivatives d_F gets smaller and d_P gets bigger)
+  // 5) Get your new mapping matrix L (p = L*[d_f d_P]^T = A^(-1)*M*[d_f d_P]^T)
+  // 6) Calculate your reordered endpoint-derivatives. d_all = L^(-1) * p_k
+  // where p_k are the old coefficients from the original linear solution and
+  // L the new remapping matrix
+  // 7) Set the new free endpoint-derivatives d_p back in the linear solver.
+  bool computeInitialSolutionWithoutPositionConstraints();
+
+  // Print the trajectory in
+  // format [t, x, y, z, vx, vy, vz, jx, jy, jz, sx, sy, sz] to a file
+  void printMatlabSampledTrajectory(const std::string& file) const;
+
  private:
   // Holds the data for constraint evaluation, since these methods are
   // static.
@@ -217,8 +368,9 @@ class PolynomialOptimizationNonLinear {
   // Objective function for the time-only version.
   // Input: segment_times = Segment times in the current iteration.
   // Input: gradient = Gradient of the objective function w.r.t. changes of
-  // parameters. We can't compute the gradient analytically here.
-  // Thus, only gradient-free optimization methods are possible.
+  // parameters.
+  // We CANNOT compute the gradient analytically here.
+  // --> Thus, only gradient-free optimization methods are possible.
   // Input: Custom data pointer = In our case, it's an ConstraintData object.
   // Output: Cost = based on the parameters passed in.
   static double objectiveFunctionTime(const std::vector<double>& segment_times,
@@ -232,14 +384,111 @@ class PolynomialOptimizationNonLinear {
   // The variables (time, derivatives) are stacked as follows: [segment_times
   // derivatives_dim_0 ... derivatives_dim_N]
   // Input: gradient = Gradient of the objective function wrt. changes of
-  // parameters. We can't compute the gradient analytically here.
-  // Thus, only gradient free optimization methods are possible.
+  // parameters.
+  // We CANNOT compute the gradient analytically here.
+  // --> Thus, only gradient free optimization methods are possible.
   // Input: data = Custom data pointer. In our case, it's an ConstraintData
   // object.
   // Output: Cost based on the parameters passed in.
   static double objectiveFunctionTimeAndConstraints(
       const std::vector<double>& optimization_variables,
       std::vector<double>& gradient, void* data);
+
+  // Objective function for optimizing only the free endpoint-derivatives.
+  // Input: optimization_variables = Optimization variables in the current
+  // iteration.
+  // The variables (derivatives) are stacked as follows: [derivatives_dim_0
+  // ...  derivatives_dim_N]
+  // Input: gradient = Gradient of the objective function wrt. changes of
+  // parameters.
+  // We CAN compute the gradient analytically here.
+  // --> Thus, gradient-free and gradient-based optimization methods are
+  // possible.
+  // Input: data = Custom data pointer. In our case, it's an ConstraintData
+  // object.
+  // Output: Cost and gradients (only for gradient-based optimization) based
+  // on the parameters passed in.
+  static double objectiveFunctionFreeConstraints(
+          const std::vector<double>& x, std::vector<double>& gradient,
+          void* data);
+
+  // Objective function for optimizing the free endpoint-derivatives and the
+  // collision potential.
+  // Input: optimization_variables = Optimization variables in the current
+  // iteration.
+  // The variables (derivatives) are stacked as follows: [derivatives_dim_0
+  // ...  derivatives_dim_N]
+  // Input: gradient = Gradient of the objective function wrt. changes of
+  // parameters.
+  // We CAN compute the gradient analytically here.
+  // --> Thus, gradient-free and gradient-based optimization methods are
+  // possible.
+  // Input: data = Custom data pointer. In our case, it's an ConstraintData
+  // object.
+  // Output: Cost and gradients (only for gradient-based optimization) based
+  // on the parameters passed in.
+  static double objectiveFunctionFreeConstraintsAndCollision(
+          const std::vector<double>& x, std::vector<double>& gradient,
+          void* data);
+
+  // Objective function for optimizing the free endpoint-derivatives, the
+  // segment times and the collision potential.
+  // Input: optimization_variables = Optimization variables in the current
+  // iteration.
+  // The variables (time, derivatives) are stacked as follows:
+  // [segment_times  derivatives_dim_0 ... derivatives_dim_N]
+  // Input: gradient = Gradient of the objective function wrt. changes of
+  // parameters.
+  // We CANNOT compute the gradient analytically here.
+  // --> Thus, only gradient free optimization methods are possible.
+  // Input: data = Custom data pointer. In our case, it's an ConstraintData
+  // object.
+  // Output: Cost and gradients (only for gradient-based optimization) based
+  // on the parameters passed in.
+  static double objectiveFunctionFreeConstraintsAndCollisionAndTime(
+          const std::vector<double>& x, std::vector<double>& gradient,
+          void* data);
+
+  // Calculate the cost and gradients of the squared difference of the
+  // derivative to be optimized.
+  static double getCostAndGradientDerivative(
+          std::vector<Eigen::VectorXd>* gradients, void* data);
+
+  // Calculate the cost and gradients of the collision potential.
+  static double getCostAndGradientCollision(
+          std::vector<Eigen::VectorXd>* gradients, void* data,
+          bool* is_collision);
+
+  // Calculate the cost and gradient of the collision potential at the
+  // current position. (See paper [3])
+  static double getCostAndGradientPotentialESDF(
+          const Eigen::VectorXd& position, Eigen::VectorXd* gradient,
+          void* opt_data, bool* is_collision);
+
+  // Calculate the numerical gradients of the collision potential.
+  static void getNumericalGradientsCollision(
+          std::vector<Eigen::VectorXd>* gradients, void* opt_data);
+
+  // Calculate the numerical gradients of the squared snap.
+  static void getNumericalGradDerivatives(
+          std::vector<Eigen::VectorXd>* gradients, void* opt_data);
+
+  // Calculate the numerical gradients and the cost of the segment times.
+  static double getCostAndGradientTime(
+          std::vector<double>* gradients, void* opt_data);
+  static double getCostAndGradientTimeSimple(
+          std::vector<double>* gradients, void* opt_data,
+          double J_d, double J_c, double J_sc);
+
+  // Calculate the numerical gradients and the cost of the soft constraints.
+  static double getCostAndGradientSoftConstraints(
+          std::vector<Eigen::VectorXd>* gradients, void* opt_data);
+  static double getCostAndGradientSoftConstraintsSimple(
+          std::vector<Eigen::VectorXd>* gradients, void* opt_data);
+
+  // Calculate the cost of the collision potential at a given distance to the
+  // obstacle (ie. current distance to obstacle)
+  double getCostPotential(double collision_distance, bool* is_collision);
 
   // Evaluates the maximum magnitude constraint at the current value of
   // the optimization variables.
@@ -253,6 +502,19 @@ class PolynomialOptimizationNonLinear {
 
   // Does the actual optimization work for the full optimization version.
   int optimizeTimeAndFreeConstraints();
+
+  // Does the actual optimization work for optimizing only the Free Constraints.
+  int optimizeFreeConstraints();
+
+  // Does the actual optimization work for optimizing the Free Constraints
+  // with an objective function including a derivative term and the collision
+  // potential.
+  int optimizeFreeConstraintsAndCollision();
+
+  // Does the actual optimization work for optimizing the Free Constraints
+  // and the Segment Timeswith an objective function including a derivative
+  // term,  collision potential and time term.
+  int optimizeFreeConstraintsAndCollisionAndTime();
 
   // Evaluates the maximum magnitude constraints as soft constraints and
   // returns a cost, depending on the violation of the constraints.
@@ -273,6 +535,37 @@ class PolynomialOptimizationNonLinear {
   static double computeTotalTrajectoryTime(
       const std::vector<double>& segment_times);
 
+  // Linear interpolation
+  double lerp(double x, double x1, double x2, double q00, double q01);
+  // Bilinear interpolation (3x linear interpolation)
+  double biLerp(double x, double y, double q11, double q12, double q21,
+                double q22, double x1, double x2, double y1, double y2);
+  // Trilinear interpolation (7x linear interpolation)
+  double triLerp(double x, double y, double z, double q000, double q001,
+                 double q010, double q011, double q100, double q101,
+                 double q110, double q111, double x1, double x2, double y1,
+                 double y2, double z1, double z2);
+
+  // Get sdf values of 8 corner neighbours
+  std::vector<std::pair<float, bool>> getNeighborsSDF(
+          const std::vector<int64_t>& idx);
+  // Get the distance of from the sdf with trilinear interpolation
+  double getDistanceSDF(const Eigen::Vector3d& position);
+
+  // Calculate matrix for mapping vector of polynomial coefficients of a
+  // function to the polynomial coefficients of its derivative.
+  // [0 1 0 0 0 ...]              f_k(t) = a0 + a1*t + a2*t^2 + a3*t^3 + ...
+  // [0 0 2 0 0 ...]          df_k(t)/dt =      a1   + 2*a2*t + 3*a3*t^2 + ...
+  // [0 0 0 3 0 ...]                    with T = [t^0 t^1 t^2 t^3 t^4 ...]
+  // [0 0 0 0 4 ...]            -->     f_k(t) = T * p_k
+  // [  ...   ...  ]            --> df_k(t)/dt = T * V * p_k
+  void calculatePolynomialDerivativeMappingMatrices();
+
+  // Set lower and upper bounds on the optimization parameters
+  void setFreeEndpointDerivativeHardConstraints(
+          const std::vector<double>& initial_solution,
+          std::vector<double>* lower_bounds, std::vector<double>* upper_bounds);
+
   // nlopt optimization object.
   std::shared_ptr<nlopt::opt> nlopt_;
 
@@ -290,9 +583,48 @@ class PolynomialOptimizationNonLinear {
   // Number of polynomials, e.g 3 for a 3D path.
   size_t dimension_;
 
+  // The vertices of the trajectory
   Vertex::Vector vertices_;
 
+  // Derivative to optimize
   int derivative_to_optimize_;
+
+  // L = A_inv * M
+  Eigen::MatrixXd L_;
+
+  // Matrix for mapping a vector of polynomial coefficients of a function to
+  // the polynomial coefficients of its derivative
+  // [0 1 0 0 0 ...]              f_k(t) = a0 + a1*t + a2*t^2 + a3*t^3 + ...
+  // [0 0 2 0 0 ...]          df_k(t)/dt =      a1   + 2*a2*t + 3*a3*t^2 + ...
+  // [0 0 0 3 0 ...]                    with T = [t^0 t^1 t^2 t^3 t^4 ...]
+  // [0 0 0 0 4 ...]            -->     f_k(t) = T * p_k
+  // [  ...   ...  ]            --> df_k(t)/dt = T * V * p_k
+  Eigen::MatrixXd V_;
+  Eigen::MatrixXd V_all_segments_;
+
+  Eigen::MatrixXd Acc_; // d^2f_k(t)/dt^2 = T * Acc_ * p_k
+  Eigen::MatrixXd Jerk_; // d^3f_k(t)/dt^3 = T * Jerk_ * p_k
+  Eigen::MatrixXd Snap_; // d^4f_k(t)/dt^4 = T * Snap_ * p_k
+  Eigen::MatrixXd Snap_all_segments_;
+
+  // Signed Distance Field needed for optimizing the collision potential
+  std::shared_ptr<motion_planning::ESDF> esdf_;
+  std::shared_ptr<sdf_tools::SignedDistanceField> sdf_;
+
+  // Linear solution / Initial guess
+  Trajectory trajectory_initial_;
+  Trajectory trajectory_initial_after_removing_pos_;
+  std::vector<Trajectory> all_trajectories_;
+
+  // TODO: ONLY DEBUG
+  std::vector<double> lower_bounds_;
+  std::vector<double> upper_bounds_;
+
+  // Initial trajectory time before nonlinear optimization
+  double trajectory_time_initial_{};
+  //  Total cost of nonlinear optimization at iteration 0
+  double total_cost_iter0_{};
+  bool is_iter0_ = true;
 };
 
 }  // namespace mav_trajectory_generation
