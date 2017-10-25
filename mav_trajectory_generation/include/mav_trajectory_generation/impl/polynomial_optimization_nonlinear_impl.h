@@ -144,7 +144,9 @@ bool PolynomialOptimizationNonLinear<_N
             mav_trajectory_generation::derivative_order::POSITION);
   }
 
-  std::cout << "vertices_: " << vertices_ << std::endl;
+  if (optimization_parameters_.print_debug_info) {
+    std::cout << "vertices_: " << vertices_ << std::endl;
+  }
 
   // 4) Setup poly_opt_ again with new set of constraints
   std::vector<double> segment_times;
@@ -689,15 +691,17 @@ int PolynomialOptimizationNonLinear<_N
                            abs_x);
   }
 
-  std::cout << "NLOPT X BOUNDS: LOWER | UPPER || INITIAL SOL || INITIAL STEP"
-            << std::endl;
-  for (int j = 0; j < lower_bounds.size(); ++j) {
-    std::cout << j << ": " << lower_bounds[j] << " | "
-              << upper_bounds[j] << " || "
-              << initial_solution[j] << " || "
-              << initial_step[j] << std::endl;
+  if (optimization_parameters_.print_debug_info) {
+    std::cout << "NLOPT X BOUNDS: LOWER | UPPER || INITIAL SOL || INITIAL STEP"
+              << std::endl;
+    for (int j = 0; j < lower_bounds.size(); ++j) {
+      std::cout << j << ": " << lower_bounds[j] << " | "
+                << upper_bounds[j] << " || "
+                << initial_solution[j] << " || "
+                << initial_step[j] << std::endl;
+    }
+    std::cout << std::endl;
   }
-  std::cout << std::endl;
 
   try {
     nlopt_->set_initial_step(initial_step);
@@ -1782,17 +1786,19 @@ double PolynomialOptimizationNonLinear<_N>::getCostAndGradientPotentialESDF(
     (*gradient) = grad_c_potential;
 
     // TODO: ONLY DEBUG
-    if (!is_valid_state) {
-      std::cout << "position: " << position[0] << " | "
-                << position[1] << " | " << position[2]
-                << " || distance: " << distance
-                << " | J_c_esdf: " << J_c_esdf << std::endl;
+    if (data->optimization_parameters_.print_debug_info) {
+      if (!is_valid_state) {
+        std::cout << "position: " << position[0] << " | "
+                  << position[1] << " | " << position[2]
+                  << " || distance: " << distance
+                  << " | J_c_esdf: " << J_c_esdf << std::endl;
 
-      std::cout << "grad_c_potential: ";
-      for (int i = 0; i < grad_c_potential.size(); ++i) {
-        std::cout << grad_c_potential[i] << " | ";
+        std::cout << "grad_c_potential: ";
+        for (int i = 0; i < grad_c_potential.size(); ++i) {
+          std::cout << grad_c_potential[i] << " | ";
+        }
+        std::cout << std::endl;
       }
-      std::cout << std::endl;
     }
   }
 
