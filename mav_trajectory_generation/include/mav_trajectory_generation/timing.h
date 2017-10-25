@@ -130,9 +130,11 @@ class Timer {
   void Start();
   void Stop();
   bool IsTiming() const;
+  double getTime() const;
 
  private:
   std::chrono::time_point<std::chrono::system_clock> time_;
+  double dt_{};
 
   bool timing_;
   size_t handle_;

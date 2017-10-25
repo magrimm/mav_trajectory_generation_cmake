@@ -96,12 +96,15 @@ void Timer::Stop() {
   std::chrono::time_point<std::chrono::system_clock> now =
       std::chrono::system_clock::now();
   double dt = std::chrono::duration<double>(now - time_).count();
+  dt_ = dt;
 
   Timing::Instance().AddTime(handle_, dt);
   timing_ = false;
 }
 
 bool Timer::IsTiming() const { return timing_; }
+
+double Timer::getTime() const { return dt_; }
 
 void Timing::AddTime(size_t handle, double seconds) {
   timers_[handle].acc_.Add(seconds);
