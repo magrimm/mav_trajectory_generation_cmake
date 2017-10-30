@@ -595,7 +595,8 @@ int PolynomialOptimizationNonLinear<_N>::optimizeTimeAndFreeConstraints() {
 template <int _N>
 int PolynomialOptimizationNonLinear<_N
 >::optimizeFreeConstraintsAndCollisionAndTime() {
-  std::vector<double> initial_step, initial_solution, segment_times,
+//  std::vector<double> initial_step, initial_solution, segment_times,
+  std::vector<double> initial_solution, segment_times,
           lower_bounds, upper_bounds;
 
   // compute initial solution
@@ -627,7 +628,7 @@ int PolynomialOptimizationNonLinear<_N
           n_segments + free_constraints.size() * free_constraints.front().size();
 
   initial_solution.reserve(n_optmization_variables);
-  initial_step.reserve(n_optmization_variables);
+//  initial_step.reserve(n_optmization_variables);
   lower_bounds.reserve(n_optmization_variables);
   upper_bounds.reserve(n_optmization_variables);
 
@@ -684,12 +685,12 @@ int PolynomialOptimizationNonLinear<_N
   lower_bounds_ = lower_bounds;
   upper_bounds_ = upper_bounds;
 
-  initial_step.reserve(n_optmization_variables);
-  for (double x : initial_solution) {
-    const double abs_x = std::abs(x);
-    initial_step.push_back(optimization_parameters_.initial_stepsize_rel *
-                           abs_x);
-  }
+//  initial_step.reserve(n_optmization_variables);
+//  for (double x : initial_solution) {
+//    const double abs_x = std::abs(x);
+//    initial_step.push_back(optimization_parameters_.initial_stepsize_rel *
+//                           abs_x);
+//  }
 
   if (optimization_parameters_.print_debug_info) {
     std::cout << "NLOPT X BOUNDS: LOWER | UPPER || INITIAL SOL || INITIAL STEP"
@@ -698,13 +699,14 @@ int PolynomialOptimizationNonLinear<_N
       std::cout << j << ": " << lower_bounds[j] << " | "
                 << upper_bounds[j] << " || "
                 << initial_solution[j] << " || "
-                << initial_step[j] << std::endl;
+//                << initial_step[j]
+                << std::endl;
     }
     std::cout << std::endl;
   }
 
   try {
-    nlopt_->set_initial_step(initial_step);
+//    nlopt_->set_initial_step(initial_step);
     nlopt_->set_lower_bounds(lower_bounds);
     nlopt_->set_upper_bounds(upper_bounds);
     nlopt_->set_min_objective(
